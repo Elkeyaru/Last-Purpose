@@ -2,6 +2,19 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [0.5.0] - testing
+
+- Added a data-driven heist catalog shared by client and server.
+- Added persistent heist selection with a safe migration for 0.4.1 saves.
+- Added the first catalog entry: Knox Bank in Louisville.
+- Added a blue X map marker after the complete radio clue is heard.
+- Added automatic arrival detection and a new location-reached stage.
+- Reveals only the small target sector so mission symbols remain visible in unexplored areas.
+- Replaced the unreliable persisted annotation with a large map overlay controlled by Last Purpose.
+- The map centers on the objective once, while the tracker shows direction and approximate distance.
+- Changed character thoughts to blue with a subtle simulated bold effect.
+- Kept the temporary 20-minute activation threshold for rapid debugging.
+
 ## [0.4.1] - 2026-09-03
 
 - Narrative thoughts now remain visible for eight seconds with a larger font.

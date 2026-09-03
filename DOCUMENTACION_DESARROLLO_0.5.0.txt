@@ -1,0 +1,63 @@
+LAST PURPOSE 0.5.0 - NOTAS DE DESARROLLO
+=========================================
+
+Estado: en pruebas
+Base estable: 0.4.1
+
+NUEVA ARQUITECTURA
+------------------
+
+LP_Heists.lua contiene el catalogo compartido de golpes. Cada entrada define ID, titulo, mision, destino, coordenadas, radio de llegada, simbolo, dialogo y frase final. HEIST_ORDER controla los candidatos disponibles. Actualmente solo contiene louisville_knox_bank; el diseno permite incorporar galeria, concesionario y penthouse sin duplicar la logica narrativa.
+
+LP_HeistStory.lua gestiona el golpe seleccionado en el cliente. ensureSelectedHeist asigna y persiste un ID valido. El mapa se centra una vez en el objetivo y renderHeistMapMarker dibuja una X azul grande como capa propia del mod, sin depender de las anotaciones vanilla. updateHeistArrival compara la posicion del jugador con el radio configurado y avanza a etapa 5.
+
+CAMBIOS DE DATOS
+----------------
+
+El esquema de ModData sube de 3 a 4. La migracion es aditiva.
+
+Campos nuevos:
+- selectedHeist: ID estable del golpe elegido.
+- mapCenteredOnce: evita volver a centrar el mapa despues de la primera apertura.
+- mapAreaRevealed: confirma que el pequeno sector desconocido ya fue revelado.
+- mapMarkerX / mapMarkerY: coordenadas marcadas.
+- heistLocationReached: confirma llegada.
+- heistReachedAtHours: momento de llegada.
+
+LastPurposeSelectedHeist se copia al ModData global del mundo para que el servidor Singleplayer emita el dialogo correspondiente al mismo golpe.
+
+FLUJO NUEVO
+-----------
+
+1. Al pasar a la etapa de radio se selecciona un golpe.
+2. El servidor obtiene su dialogo desde el catalogo.
+3. La ultima linea recibida avanza a etapa 4.
+4. Se revela un sector pequeno y la primera apertura centra el mapa en una X azul dibujada por Last Purpose.
+5. Al entrar en el radio del edificio se avanza a etapa 5.
+6. La etapa 5 pide localizar el botin; el botin aun no esta implementado.
+
+PRIMER OBJETIVO
+---------------
+
+ID: louisville_knox_bank
+Nombre: La boveda abandonada
+Destino: Knox Bank, Louisville
+Coordenadas candidatas B42: 12564, 1698
+Radio provisional: 35 cuadros
+
+Las coordenadas y el radio deben validarse visualmente dentro de Build 42 estable antes de marcar 0.5.0 como estable.
+
+CAMBIO VISUAL
+-------------
+
+Los pensamientos ahora son azules. La negrita se simula dibujando una segunda pasada desplazada un pixel, porque la fuente flotante de B42 no expone una variante bold independiente.
+
+PRUEBA REQUERIDA
+----------------
+
+- Cargar una partida 0.4.1 en etapa 4 y confirmar migracion.
+- Abrir el mapa y comprobar una sola X azul.
+- Cerrar y abrir la partida y confirmar que no se duplica.
+- Validar que 12564,1698 corresponde al banco correcto.
+- Entrar a menos de 35 cuadros y confirmar etapa 5.
+- Revisar console.txt buscando LastPurpose, LP_, ERROR y stack traces.

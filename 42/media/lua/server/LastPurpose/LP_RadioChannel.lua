@@ -1,4 +1,5 @@
 LastPurposeRadio = LastPurposeRadio or {}
+require "LastPurpose/LP_Heists"
 LastPurposeRadio.UUID = "LP-HEIST-001"
 LastPurposeRadio.MODDATA_KEY = "LastPurposeRadioFrequency"
 LastPurposeRadio.MIN_FREQUENCY = 88000
@@ -78,11 +79,12 @@ end
 
 local function createBroadcast(worldAgeHours)
     local broadcast = RadioBroadCast.new("LP-HEIST-" .. tostring(math.floor(worldAgeHours / 6)), -1, -1)
-    broadcast:AddRadioLine(RadioLine.new("<bzzt> ...Confirmaste el lugar?...", 0.72, 0.78, 0.68))
-    broadcast:AddRadioLine(RadioLine.new("Si. El Banco de Louisville sigue cerrado desde la evacuacion.", 0.82, 0.82, 0.76))
-    broadcast:AddRadioLine(RadioLine.new("Dicen que dejaron dinero, joyas y las piezas de la boveda privada.", 0.72, 0.78, 0.68))
-    broadcast:AddRadioLine(RadioLine.new("Entraremos por la parte trasera. Nos vemos alli cuando oscurezca.", 0.82, 0.82, 0.76))
-    broadcast:AddRadioLine(RadioLine.new("No llegues tarde. Esta es nuestra ultima oportunidad. <fzzt>", 0.72, 0.78, 0.68))
+    local selected = getGameTime():getModData().LastPurposeSelectedHeist
+    local heist = LastPurpose.getHeist(selected) or LastPurpose.getHeist(LastPurpose.HEIST_ORDER[1])
+    for index, text in ipairs(heist.dialogue) do
+        local color = index % 2 == 0 and {0.82, 0.82, 0.76} or {0.72, 0.78, 0.68}
+        broadcast:AddRadioLine(RadioLine.new(text, color[1], color[2], color[3]))
+    end
     return broadcast
 end
 

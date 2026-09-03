@@ -31,5 +31,5 @@ function LastPurpose.updateProgress(p)
 end
 function LastPurpose.onEveryOneMinute()
  local p=LastPurpose.getPlayerSafe(0)
- if p then LastPurpose.updateProgress(p); LastPurpose.updateRadioStory(p) end
+ if p then LastPurpose.updateProgress(p); LastPurpose.updateRadioStory(p); LastPurpose.updateHeistArrival(p) end
 end

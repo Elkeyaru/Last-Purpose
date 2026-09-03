@@ -83,11 +83,23 @@ function LPGoalTracker:prerender()
   local frequency=LastPurpose.getStoryFrequency()
   local frequencyText=frequency and string.format("Frecuencia: %.1f MHz",frequency/1000) or "Frecuencia: buscando senal..."
   self:drawText(frequencyText,12,100,0.90,0.74,0.38,1,UIFont.Small)
- elseif d.stage>=4 then
+ elseif d.stage==4 then
+ local heist=LastPurpose.ensureSelectedHeist(p)
   self:drawText("EL ULTIMO GOLPE",12,44,0.92,0.92,0.92,1,UIFont.Medium)
-  self:drawText("Mision: Adelantarse a la competencia",12,76,0.90,0.74,0.38,1,UIFont.Small)
-  self:drawText("Destino: Banco de Louisville",12,100,0.72,0.78,0.82,1,UIFont.Small)
-  self:drawText("El botin debe ser tuyo.",12,124,0.65,0.68,0.72,1,UIFont.Small)
+  self:drawText("Mision: "..(heist and heist.mission or "Trabajo desconocido"),12,76,0.90,0.74,0.38,1,UIFont.Small)
+  self:drawText("Destino: "..(heist and heist.destination or "Desconocido"),12,100,0.72,0.78,0.82,1,UIFont.Small)
+  if heist then
+   local dx=heist.x-p:getX(); local dy=heist.y-p:getY(); local distance=math.sqrt((dx*dx)+(dy*dy))
+   local vertical=dy<0 and "N" or "S"; local horizontal=dx<0 and "O" or "E"; local direction
+   if math.abs(dx)>math.abs(dy)*2 then direction=horizontal elseif math.abs(dy)>math.abs(dx)*2 then direction=vertical else direction=vertical..horizontal end
+   local distanceText=distance>=1000 and string.format("%.1f km",distance/1000) or string.format("%.0f m",distance)
+   self:drawText("Direccion: "..direction.."  |  Distancia: "..distanceText,12,124,0.65,0.68,0.72,1,UIFont.Small)
+  end
+ elseif d.stage>=5 then
+  local heist=LastPurpose.ensureSelectedHeist(p)
+  self:drawText("LUGAR LOCALIZADO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText(heist and heist.title or "El golpe",12,76,0.90,0.74,0.38,1,UIFont.Small)
+  self:drawText("Encuentra el botin dentro del edificio.",12,100,0.72,0.78,0.82,1,UIFont.Small)
  elseif d.completed then
   self:drawText("PREPARAR EL GOLPE",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText("Mision completada",12,76,0.45,0.86,0.55,1,UIFont.Small)

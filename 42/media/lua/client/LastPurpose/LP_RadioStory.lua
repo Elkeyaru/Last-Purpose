@@ -10,6 +10,7 @@ function LastPurpose.updateRadioStory(player)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
     if data.completed and data.stage < 3 then
+        LastPurpose.ensureSelectedHeist(player)
         data.stage = 3
         data.radioPromptShown = true
         LastPurpose.showThought(player, {
@@ -24,7 +25,8 @@ function LastPurpose.onDeviceText(guid, interactCodes, x, y, z, line)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
     if data.stage ~= 3 or type(line) ~= "string" then return end
-    if string.find(line, "Esta es nuestra ultima oportunidad", 1, true) == nil then return end
+    local heist = LastPurpose.ensureSelectedHeist(player)
+    if not heist or string.find(line, heist.finalLine, 1, true) == nil then return end
 
     data.stage = 4
     data.radioTransmissionHeard = true

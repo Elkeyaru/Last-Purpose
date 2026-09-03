@@ -30,8 +30,9 @@ end
 function LastPurposeThought:render()
     for index, line in ipairs(self.lines) do
         local y = 8 + ((index - 1) * 24)
-        self:drawTextCentre(line, (self.width / 2) + 1, y + 1, 0, 0, 0, 0.85, UIFont.Medium)
-        self:drawTextCentre(line, self.width / 2, y, 0.94, 0.94, 0.90, 1, UIFont.Medium)
+        self:drawTextCentre(line, (self.width / 2) + 1, y + 1, 0, 0, 0.08, 0.90, UIFont.Medium)
+        self:drawTextCentre(line, self.width / 2, y, 0.25, 0.58, 1.00, 1, UIFont.Medium)
+        self:drawTextCentre(line, (self.width / 2) + 1, y, 0.25, 0.58, 1.00, 0.92, UIFont.Medium)
     end
 end
 
