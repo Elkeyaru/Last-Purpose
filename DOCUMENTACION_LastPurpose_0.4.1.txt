@@ -1,0 +1,357 @@
+LAST PURPOSE - DOCUMENTACION TECNICA Y DE DISENO
+================================================
+
+Documento actualizado: 3 de septiembre de 2026
+Version estable actual: 0.4.1
+Ultima base confirmada dentro del juego: 0.4.1
+Juego objetivo: Project Zomboid Build 42 estable
+Modo soportado: Singleplayer
+Autor: ElKeyaru
+ID inmutable del mod: LastPurposeB42
+Repositorio: https://github.com/Elkeyaru/Last-Purpose (privado)
+
+
+1. OBJETIVO DEL PROYECTO
+------------------------
+
+Last Purpose crea historias y objetivos de mid-game y late-game segun la profesion inicial del superviviente. Las pistas deben integrarse en el mundo mediante radios, mapas, edificios, objetos, vehiculos y eventos. La interfaz sirve como recordatorio; no debe reemplazar la exploracion.
+
+La primera historia desarrollada pertenece al Ladron. Su arco ya no se concibe como un solo banco: evolucionara hacia una lista de trabajos con varios golpes y un gran golpe final.
+
+
+2. ESTADO FUNCIONAL ACTUAL
+--------------------------
+
+- Detecta la profesion Ladron mediante APIs de Build 42 y mecanismos alternativos.
+- Activa el prologo por tiempo sobrevivido.
+- Durante la depuracion, el umbral esta reducido temporalmente a 20 minutos de juego.
+- En produccion debe restaurarse a 15 dias.
+- Ejecuta la mision "Preparar el golpe".
+- Detecta palanca, destornillador, linterna, bolsa/mochila y vehiculo funcional con combustible.
+- Guarda progreso acumulativo en player:getModData().
+- Muestra un tracker movible, ocultable con J y cerrado con X.
+- Tras completar la preparacion, muestra un pensamiento durante ocho segundos.
+- Registra una emisora narrativa en una frecuencia aleatoria libre.
+- Transmite la pista a las 02:00, 08:00, 14:00 y 20:00.
+- La emisora permanece silenciosa fuera de esos horarios.
+- Detecta que el jugador recibio la ultima linea de la transmision.
+- Espera cinco segundos y muestra la reaccion del personaje durante ocho segundos.
+- Avanza a "Adelantarse a la competencia" con destino provisional Banco de Louisville.
+- Evita frecuencias ocupadas por canales vanilla y canales dinamicos declarados por otros mods.
+
+Pendiente visual anotado, no implementado: mostrar pensamientos en azul y negrita, sin caja.
+
+
+3. ESTRUCTURA DE ARCHIVOS
+------------------------
+
+LastPurpose/
+  mod.info
+  README.md
+  CHANGELOG.md
+  CONTRIBUTING.md
+  LICENSE
+  DOCUMENTACION_LastPurpose_0.4.1.txt
+  common/
+    media/lua/shared/LastPurpose/LP_Common.lua
+  42/
+    mod.info
+    media/lua/client/LastPurpose/
+      LP_Main.lua
+      LP_Config.lua
+      LP_State.lua
+      LP_BurglarStory.lua
+      LP_RadioStory.lua
+      LP_Thought.lua
+      LP_Tracker.lua
+    media/lua/server/LastPurpose/
+      LP_RadioChannel.lua
+
+Las copias ZIP se guardan en .backups/ y Git las ignora.
+
+
+4. MANIFIESTOS Y COMPATIBILIDAD
+-------------------------------
+
+mod.info y 42/mod.info conservan:
+
+- id=LastPurposeB42
+- versionMin=42.0
+- version=0.4.1
+
+El ID no debe cambiar: hacerlo puede romper la asociacion del mod con partidas existentes. La carpeta 42 mantiene a Build 42 estable como objetivo principal. No deben borrarse partidas ni editarse archivos dentro de Saves.
+
+
+5. EXPLICACION DEL CODIGO POR ARCHIVO
+-------------------------------------
+
+5.1 LP_Common.lua
+
+Inicializa la tabla global LastPurpose de forma segura. Es el punto compartido minimo y evita reemplazar una tabla creada por otro archivo del propio mod.
+
+5.2 LP_Config.lua
+
+Contiene constantes y catalogos:
+
+- VERSION: version logica mostrada por el codigo.
+- DEBUG_FAST_ACTIVATION: activa el umbral temporal de depuracion.
+- ACTIVATION_MINUTES: 20 minutos durante pruebas.
+- ACTIVATION_DAYS: conversion del umbral a dias para reutilizar el calculo existente.
+- SAVE_KEY: clave LastPurpose dentro de ModData.
+- TRACKER_KEY: tecla J.
+- OBJECTIVES: requisitos visibles de Preparar el golpe.
+- TOOL_TYPES: equivalencias entre tipos completos de objetos B42 y objetivos.
+
+Antes de publicar debe desactivarse el modo rapido y restaurarse el equivalente a 15 dias.
+
+5.3 LP_State.lua
+
+Funciones:
+
+- getPlayerSafe(i): obtiene el jugador local evitando accesos invalidos.
+- isBurglar(player): detecta Ladron por profesion, CharacterTrait.BURGLAR, rasgos conocidos y alternativas protegidas con pcall.
+- getData(player): crea o migra la tabla persistente sin borrar datos anteriores.
+- getDaysSurvived(player): convierte horas sobrevividas a dias.
+
+Esquema actual de guardado: 3.
+
+Ruta:
+player:getModData().LastPurpose
+
+Campos principales:
+
+- schema: version del formato de datos.
+- active: indica que el prologo fue activado.
+- completed: Preparar el golpe fue completada.
+- stage: etapa narrativa numerica.
+- trackerVisible: visibilidad elegida por el jugador.
+- trackerX y trackerY: ultima posicion confirmada del tracker.
+- objectives: tabla de requisitos ya encontrados.
+- activatedAtHours: hora de supervivencia de activacion.
+- completedAtHours: hora de finalizacion de preparacion.
+- radioPromptShown: pensamiento inicial mostrado.
+- radioTransmissionHeard: ultima linea de radio recibida.
+- radioHeardAtHours: momento de recepcion.
+
+Etapas actuales:
+
+- 0: esperando activacion.
+- 1: Preparar el golpe activa.
+- 2: preparacion completada.
+- 3: buscar e interceptar la transmision.
+- 4: pista escuchada; adelantarse a la competencia.
+
+5.4 LP_BurglarStory.lua
+
+- scan(container, objectives, seen): recorre inventario y contenedores internos, evita ciclos y marca herramientas y bolsas.
+- vehicleReady(vehicle): valida motor funcional, tanque existente y combustible mayor que cero.
+- hasVehicle(player): solo comprueba el vehiculo actual del jugador; no enumera todos los vehiculos de la celda.
+- complete(objectives): verifica que todos los requisitos esten marcados.
+- updateProgress(player): activa el prologo, escanea requisitos y completa Preparar el golpe.
+- onEveryOneMinute(): actualiza progreso y transicion hacia la radio una vez por minuto de juego.
+
+Los objetivos son acumulativos: una vez detectados permanecen completos aunque luego se pierda el objeto.
+
+5.5 LP_RadioStory.lua
+
+Parte cliente de la historia de radio:
+
+- getStoryFrequency(): lee la frecuencia persistente desde ModData global del mundo.
+- updateRadioStory(player): mueve una preparacion completada a etapa 3 y muestra el pensamiento inicial.
+- onDeviceText(..., line): recibe solamente lineas que el aparato del jugador alcanza a reproducir. La etapa avanza al reconocer la ultima frase, no al encender la radio ni al comenzar el mensaje.
+- updatePendingRadioReaction(): espera cinco segundos reales despues de la ultima linea y muestra la reaccion.
+
+La reaccion pendiente usa getTimestampMs(), por lo que no se acelera junto con el reloj del juego.
+
+5.6 LP_Thought.lua
+
+Crea texto flotante temporal cerca del personaje:
+
+- LastPurposeThought:new(): prepara el elemento visual y su vencimiento.
+- prerender(): sigue la posicion en pantalla del personaje, limita el texto a la pantalla y lo elimina al vencer.
+- render(): dibuja dos lineas con UIFont.Medium y sombra ligera, sin caja.
+- showThought(): reemplaza cualquier pensamiento anterior y lo muestra durante 8000 ms.
+
+Pendiente: color azul y negrita en una revision futura.
+
+5.7 LP_RadioChannel.lua
+
+Parte servidor de la radio, tambien utilizada en Singleplayer:
+
+- getOccupiedFrequencies(): combina los canales ya registrados con DynamicRadio.channels, que incluye canales de mods aun pendientes de registro.
+- isValidFrequency(): valida rango 88.0-108.0 MHz y pasos sintonizables de 0.2 MHz.
+- chooseFreeFrequency(): recorre desde un punto aleatorio todas las frecuencias posibles hasta encontrar una libre.
+- getFrequency(): conserva la frecuencia guardada si sigue libre; si hay colision, selecciona y persiste otra.
+- onLoadRadioScripts(): crea "Senal desconocida" como canal Bandit con UUID LP-HEIST-001.
+- createBroadcast(): construye la conversacion sobre el Banco de Louisville.
+- isStoryHour(): acepta exclusivamente 02:00, 08:00, 14:00 y 20:00.
+- onEveryHours(): publica el dialogo solamente en esos horarios. No reproduce musica ni relleno entre emisiones.
+
+La frecuencia se guarda en:
+getGameTime():getModData().LastPurposeRadioFrequency
+
+Si no existe ninguna frecuencia libre, el mod no sobrescribe otro canal: cancela el registro y escribe un error claro.
+
+5.8 LP_Tracker.lua
+
+Define el panel del objetivo, sus estados visuales, cierre, tecla J, posicion persistente y arrastre seguro. Usa captura del raton, liberacion dentro y fuera del panel y limites de pantalla. No usa drawProgressBar.
+
+Durante el modo rapido presenta minutos. En produccion volvera a presentar dias.
+
+5.9 LP_Main.lua
+
+Carga los modulos cliente en orden y registra una sola vez:
+
+- Events.OnCreatePlayer: crear/restaurar tracker.
+- Events.EveryOneMinute: progreso narrativo e inventario.
+- Events.OnKeyPressed: tecla J.
+- Events.OnDeviceText: escuchar lineas recibidas por radio.
+- Events.OnTick: ejecutar la reaccion cinco segundos despues.
+
+
+6. FLUJO COMPLETO ACTUAL
+------------------------
+
+1. El juego carga LastPurposeB42.
+2. El servidor recopila frecuencias vanilla y de otros mods.
+3. Conserva una frecuencia previa libre o selecciona otra.
+4. El cliente detecta si el jugador es Ladron.
+5. Tras el umbral temporal activa Preparar el golpe.
+6. Cada minuto escanea el inventario y el vehiculo actual.
+7. Al completar los cinco requisitos muestra que todo esta preparado.
+8. La etapa cambia a buscar la Senal desconocida y muestra su frecuencia.
+9. A las 02:00, 08:00, 14:00 o 20:00 se transmite la conversacion.
+10. Solo un jugador sintonizado y dentro del alcance recibe OnDeviceText.
+11. La ultima frase marca la transmision como escuchada.
+12. Cinco segundos despues aparece la reaccion durante ocho segundos.
+13. El tracker indica el Banco de Louisville como destino provisional.
+
+
+7. DISENO APROBADO: VARIOS GOLPES
+---------------------------------
+
+La historia del Ladron evolucionara hacia "La lista de trabajos". Cada golpe sera una definicion de datos, no codigo duplicado.
+
+Variantes deseadas:
+
+- Banco de Louisville: dinero, oro, bonos o contenido de boveda.
+- Exposicion o galeria: pintura unica o coleccion de arte.
+- Concesionario: robar un vehiculo deportivo concreto.
+- Edificio alto o penthouse: recuperar una joya, documento u objeto exclusivo.
+- Posibles expansiones: mansion, instalacion industrial u objetivos aportados por mapas compatibles.
+
+Cada definicion futura debe contener:
+
+- id estable.
+- titulo y descripcion.
+- dialogo de radio.
+- coordenadas y radio de llegada.
+- tipo de marca en el mapa.
+- condicion de disponibilidad.
+- objetivo o botin.
+- condicion de finalizacion.
+- recompensa y epilogo.
+
+El golpe seleccionado se guardara, por ejemplo, como selectedHeist. No debe cambiar al recargar la partida. Los golpes completados se guardaran para evitar repeticiones y permitir una cadena progresiva. "El ultimo golpe" quedara reservado para el cierre mayor de la historia.
+
+
+8. HOJA DE RUTA
+----------------
+
+0.4.1:
+- Validar en juego la proteccion de frecuencias y la retirada total de musica.
+- Guardar commit estable tras revisar console.txt.
+
+0.5.0:
+- Crear catalogo HEISTS desacoplado de la logica.
+- Convertir el Banco de Louisville en primera definicion.
+- Validar coordenadas exactas de Build 42 estable.
+- Guardar selectedHeist.
+- Añadir marca X al mapa despues de escuchar la pista.
+- Detectar llegada al edificio.
+
+Version posterior:
+- Crear botines unicos y condiciones de extraccion.
+- Añadir galeria, concesionario y penthouse.
+- Crear secuencia de trabajos y golpe final.
+- Añadir recompensas y epilogos.
+- Incorporar profesiones adicionales una por una.
+
+
+9. PROFESIONES PLANIFICADAS
+---------------------------
+
+- Ladron: La lista de trabajos / El ultimo golpe.
+- Leñador: La cabana segura.
+- Veterano: Codigo de honor.
+- Mecanico: Hasta la ultima rueda.
+- Medico: Querido Doctor...
+- Desempleado: Que hare manana.
+
+Integraciones futuras y siempre opcionales: This Is Your Life, Expanded Helicopter Events y More Traits. Last Purpose debe funcionar sin ellas.
+
+
+10. ERRORES RESUELTOS
+---------------------
+
+- 0.1.4: eliminado error constante de drawProgressBar.
+- 0.2.1: eliminado uso inseguro de getCell():getVehicles(); se valida solo el vehiculo actual.
+- 0.3.1: corregido arrastre erratico y panel pegado al cursor.
+- 0.4.x: radio implementada mediante APIs nativas y deteccion real de lineas recibidas.
+
+
+11. PROCEDIMIENTO DE PRUEBA
+---------------------------
+
+1. Cerrar Project Zomboid completamente.
+2. Activar Last Purpose [B42].
+3. Crear o cargar un Ladron.
+4. Confirmar version 0.4.1 en console.txt.
+5. Esperar 20 minutos de juego durante depuracion.
+6. Completar los cinco requisitos.
+7. Confirmar pensamiento inicial de ocho segundos, sin caja.
+8. Sintonizar la frecuencia mostrada.
+9. Esperar 02:00, 08:00, 14:00 o 20:00.
+10. Confirmar silencio fuera del horario y ausencia de soundtrack forzado.
+11. Escuchar la transmision completa.
+12. Confirmar que la reaccion no aparece antes de la ultima linea.
+13. Confirmar pausa de cinco segundos y reaccion de ocho segundos.
+14. Probar J, X y arrastre del tracker.
+15. Salir normalmente y revisar C:\Users\reymi\Zomboid\console.txt.
+16. Buscar LastPurpose, LP_, ERROR, Exception y stack traces.
+
+
+12. REGLAS DE DESARROLLO
+------------------------
+
+- Build 42 estable es la version principal.
+- Singleplayer es el unico modo soportado por ahora.
+- No borrar partidas guardadas.
+- Crear respaldo antes de cambios importantes.
+- No cambiar LastPurposeB42.
+- Preservar la estructura de mod.info y la carpeta 42.
+- Mantener migraciones aditivas de ModData.
+- Evitar APIs no confirmadas de B42.
+- No introducir dependencias obligatorias.
+- Revisar console.txt despues de cada prueba.
+- No publicar una revision como estable hasta validarla dentro del juego.
+- El modo de 20 minutos es temporal y nunca debe llegar a una version publica final.
+
+
+13. UBICACIONES IMPORTANTES
+---------------------------
+
+Proyecto activo:
+C:\Users\reymi\Zomboid\mods\LastPurpose
+
+Consola:
+C:\Users\reymi\Zomboid\console.txt
+
+Respaldos:
+C:\Users\reymi\Zomboid\mods\LastPurpose\.backups
+
+Repositorio remoto:
+https://github.com/Elkeyaru/Last-Purpose
+
+
+FIN DEL DOCUMENTO

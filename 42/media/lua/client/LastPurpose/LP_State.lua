@@ -33,8 +33,8 @@ function LastPurpose.isBurglar(p)
 end
 function LastPurpose.getData(p)
  local root=p:getModData()
- if type(root[LastPurpose.SAVE_KEY])~="table" then root[LastPurpose.SAVE_KEY]={schema=2,active=false,completed=false,stage=0,trackerVisible=true,objectives={}} end
- local d=root[LastPurpose.SAVE_KEY]; d.schema=2
+ if type(root[LastPurpose.SAVE_KEY])~="table" then root[LastPurpose.SAVE_KEY]={schema=3,active=false,completed=false,stage=0,trackerVisible=true,objectives={}} end
+ local d=root[LastPurpose.SAVE_KEY]; d.schema=3
  if d.stage==nil then d.stage=d.active and 1 or 0 end
  if d.completed==nil then d.completed=false end
  if d.trackerVisible==nil then d.trackerVisible=true end

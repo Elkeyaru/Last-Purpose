@@ -31,8 +31,17 @@ function LPGoalTracker:onMouseMove(dx,dy)
  return ISPanel.onMouseMove(self,dx,dy)
 end
 function LPGoalTracker:stopDragging()
+ local wasDragging=self.dragging
  self.dragging=false
  self:setCapture(false)
+ if wasDragging then
+  local p=LastPurpose.getPlayerSafe(0)
+  if p and LastPurpose.isBurglar(p) then
+   local d=LastPurpose.getData(p)
+   d.trackerX=math.floor(self:getX())
+   d.trackerY=math.floor(self:getY())
+  end
+ end
 end
 function LPGoalTracker:onMouseUp(x,y)
  self:stopDragging()
@@ -55,11 +64,30 @@ function LPGoalTracker:prerender()
  if not d.active then
   local remaining=math.max(0,LastPurpose.ACTIVATION_DAYS-days)
   self:drawText("Algo quedo pendiente...",12,44,0.92,0.92,0.92,1,UIFont.Medium)
-  self:drawText(string.format("Sobrevive %.1f dias mas",remaining),12,72,0.72,0.78,0.82,1,UIFont.Small)
+  if LastPurpose.DEBUG_FAST_ACTIVATION then
+   self:drawText(string.format("Sobrevive %.0f minutos mas",remaining*24*60),12,72,0.72,0.78,0.82,1,UIFont.Small)
+  else
+   self:drawText(string.format("Sobrevive %.1f dias mas",remaining),12,72,0.72,0.78,0.82,1,UIFont.Small)
+  end
   local progress=math.min(days/LastPurpose.ACTIVATION_DAYS,1); local width=self.width-24
   self:drawRect(12,102,width,12,0.90,0.10,0.12,0.14); self:drawRect(14,104,math.max(0,(width-4)*progress),8,1.00,0.36,0.58,0.74)
   self:drawRectBorder(12,102,width,12,0.70,0.45,0.50,0.55)
-  self:drawText(string.format("Dia %.1f / %d",days,LastPurpose.ACTIVATION_DAYS),12,121,0.65,0.68,0.72,1,UIFont.Small)
+  if LastPurpose.DEBUG_FAST_ACTIVATION then
+   self:drawText(string.format("Minuto %.0f / %d",days*24*60,LastPurpose.ACTIVATION_MINUTES),12,121,0.65,0.68,0.72,1,UIFont.Small)
+  else
+   self:drawText(string.format("Dia %.1f / %d",days,LastPurpose.ACTIVATION_DAYS),12,121,0.65,0.68,0.72,1,UIFont.Small)
+  end
+ elseif d.stage==3 then
+  self:drawText("INTERCEPTAR LA TRANSMISION",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText("Busca la senal desconocida.",12,76,0.72,0.78,0.82,1,UIFont.Small)
+  local frequency=LastPurpose.getStoryFrequency()
+  local frequencyText=frequency and string.format("Frecuencia: %.1f MHz",frequency/1000) or "Frecuencia: buscando senal..."
+  self:drawText(frequencyText,12,100,0.90,0.74,0.38,1,UIFont.Small)
+ elseif d.stage>=4 then
+  self:drawText("EL ULTIMO GOLPE",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText("Mision: Adelantarse a la competencia",12,76,0.90,0.74,0.38,1,UIFont.Small)
+  self:drawText("Destino: Banco de Louisville",12,100,0.72,0.78,0.82,1,UIFont.Small)
+  self:drawText("El botin debe ser tuyo.",12,124,0.65,0.68,0.72,1,UIFont.Small)
  elseif d.completed then
   self:drawText("PREPARAR EL GOLPE",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText("Mision completada",12,76,0.45,0.86,0.55,1,UIFont.Small)
@@ -81,8 +109,14 @@ function LastPurpose.ensureTracker(i,p)
  if not LastPurpose.isBurglar(p) then print("[LastPurpose] Personaje ignorado: no se detecto base:burglar"); return end
  LastPurpose.updateProgress(p)
  if not LastPurpose.tracker then
-  print("[LastPurpose] Ladron detectado; creando tracker v"..LastPurpose.VERSION)
-  LastPurpose.tracker=LPGoalTracker:new(getCore():getScreenWidth()-370,90,345,205)
+ print("[LastPurpose] Ladron detectado; creando tracker v"..LastPurpose.VERSION)
+  local d=LastPurpose.getData(p)
+  local defaultX=getCore():getScreenWidth()-370
+  local savedX=tonumber(d.trackerX) or defaultX
+  local savedY=tonumber(d.trackerY) or 90
+  local x=math.max(0,math.min(getCore():getScreenWidth()-345,savedX))
+  local y=math.max(0,math.min(getCore():getScreenHeight()-205,savedY))
+  LastPurpose.tracker=LPGoalTracker:new(x,y,345,205)
   LastPurpose.tracker:initialise(); LastPurpose.tracker:addToUIManager()
  end
  LastPurpose.tracker:setVisible(LastPurpose.getData(p).trackerVisible~=false)

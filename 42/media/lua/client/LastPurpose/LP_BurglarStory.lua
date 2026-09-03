@@ -29,4 +29,7 @@ function LastPurpose.updateProgress(p)
   if HaloTextHelper then HaloTextHelper.addTextWithArrow(p,"Mision completada: Preparar el golpe",true,120,220,140) end
  end
 end
-function LastPurpose.onEveryOneMinute() local p=LastPurpose.getPlayerSafe(0); if p then LastPurpose.updateProgress(p) end end
+function LastPurpose.onEveryOneMinute()
+ local p=LastPurpose.getPlayerSafe(0)
+ if p then LastPurpose.updateProgress(p); LastPurpose.updateRadioStory(p) end
+end

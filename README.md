@@ -8,7 +8,7 @@ The current prototype focuses on the Burglar story, **“The Last Heist”** (`E
 
 ## Current version
 
-**0.3.1** — Singleplayer, Project Zomboid Build 42 stable.
+**0.4.1 (stable)** — Singleplayer, Project Zomboid Build 42 stable.
 
 Implemented:
 
@@ -21,6 +21,8 @@ Implemented:
 - `J` toggles the tracker.
 - Backward-compatible save-data migration from versions 0.1.x and 0.2.x.
 - Modular Lua architecture.
+- Persistent random radio frequency and six-hour narrative broadcasts.
+- Second story stage: intercept the conversation about the Louisville bank.
 
 ## Planned direction
 

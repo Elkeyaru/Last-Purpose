@@ -2,6 +2,31 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [0.4.1] - 2026-09-03
+
+- Narrative thoughts now remain visible for eight seconds with a larger font.
+- The second thought appears only after the final transmission line is heard.
+- Story broadcasts now air at 02:00, 08:00, 14:00, and 20:00.
+- The channel remains silent outside the four scheduled story broadcasts.
+- The tracker no longer reveals the broadcast interval.
+- Removed the thought background box while retaining the larger floating text.
+- Added a five-second pause between the final radio line and the character reaction.
+- Temporarily reduced prologue activation to 20 in-game minutes for debugging.
+- Radio frequency selection now scans all registered vanilla and mod channels and only uses a free frequency.
+- A persisted frequency is automatically replaced if another channel occupies it on a later load.
+- Removed the experimental soundtrack playback to keep the radio system focused and compatible.
+- Tracker X/Y coordinates are now saved on drag release and restored safely on the next load.
+
+## [0.4.0] - 2026-09-03
+
+### Added
+
+- Added a persistent random Bandit-category radio channel.
+- Added a native radio conversation broadcast every six in-game hours.
+- Added the “Interceptar la transmisión” story stage and frequency tracker.
+- Added detection of the final received radio line through `OnDeviceText`.
+- Added the transition to “Adelantarse a la competencia” at the Louisville bank.
+
 ## [0.3.1] - 2026-09-03
 
 ### Fixed
