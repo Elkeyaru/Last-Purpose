@@ -1,0 +1,412 @@
+LAST PURPOSE - DOCUMENTACION DEL PROYECTO
+=========================================
+
+Documento actualizado: 3 de septiembre de 2026
+Version estable documentada: 0.3.1
+Juego objetivo: Project Zomboid Build 42 estable
+Modo soportado actualmente: Singleplayer
+Autor indicado en el mod: ElKeyaru
+ID interno: LastPurposeB42
+
+
+1. RESUMEN DEL PROYECTO
+-----------------------
+
+Last Purpose es un mod narrativo y de progresion para Project Zomboid. Su objetivo es resolver la falta de metas durante el mid-game y el late-game mediante historias y cadenas de misiones basadas en la profesion inicial del personaje.
+
+Cada profesion tendra una historia propia, objetivos de preparacion, viajes, localizaciones importantes, recompensas y un desenlace. La intencion final es integrar las misiones con elementos del mundo, especialmente radios, transmisiones, mapas, edificios y eventos, en lugar de depender solamente de menus.
+
+El nombre oficial usado actualmente es "Last Purpose". El identificador del mod es "LastPurposeB42" y debe conservarse para no romper la configuracion de las partidas existentes.
+
+
+2. ESTADO ACTUAL
+----------------
+
+La version 0.3.1 esta implementada y probada dentro de Project Zomboid B42 estable.
+
+Funciones confirmadas:
+
+- Deteccion de la profesion Ladron.
+- Activacion del prologo despues de sobrevivir 15 dias.
+- Historia inicial: "El ultimo golpe".
+- Primera mision: "Preparar el golpe".
+- Deteccion automatica de objetos requeridos.
+- Comprobacion de un vehiculo funcional con combustible.
+- Persistencia del progreso en la partida.
+- Tracker de objetivos visible en pantalla.
+- Tecla J para ocultar y mostrar el tracker.
+- Boton X para ocultar el tracker.
+- Interfaz movible y limitada a los bordes de la pantalla.
+- Compatibilidad de datos con versiones 0.1.x y 0.2.x.
+- Arquitectura Lua dividida en modulos.
+
+La version 0.3.1 es la base estable actual.
+
+
+3. ESTRUCTURA DE ARCHIVOS
+------------------------
+
+LastPurpose/
+|-- mod.info
+|-- DOCUMENTACION_LastPurpose_0.3.1.txt
+|-- .backups/
+|-- 42/
+|   |-- mod.info
+|   `-- media/lua/client/LastPurpose/
+|       |-- LP_Main.lua
+|       |-- LP_Config.lua
+|       |-- LP_State.lua
+|       |-- LP_BurglarStory.lua
+|       `-- LP_Tracker.lua
+`-- common/media/lua/shared/LastPurpose/
+    `-- LP_Common.lua
+
+Responsabilidades:
+
+mod.info
+    Manifiesto raiz. Permite que el mod aparezca correctamente en el menu. Contiene nombre, ID, descripcion, autor, version y version minima del juego.
+
+42/mod.info
+    Manifiesto especifico de Build 42. Debe permanecer sincronizado con el manifiesto raiz.
+
+LP_Main.lua
+    Punto de entrada del cliente. Carga los modulos y registra OnCreatePlayer, EveryOneMinute y OnKeyPressed. Usa una bandera para evitar registros duplicados.
+
+LP_Config.lua
+    Configuracion central: version, dia de activacion, tecla, clave de guardado, lista de objetivos y tipos de objetos aceptados.
+
+LP_State.lua
+    Acceso seguro al jugador, deteccion del Ladron, lectura y migracion de ModData, y calculo de dias sobrevividos.
+
+LP_BurglarStory.lua
+    Logica narrativa actualmente disponible: activacion del prologo, escaneo de inventario, validacion del vehiculo y finalizacion de "Preparar el golpe".
+
+LP_Tracker.lua
+    Interfaz visual: creacion del panel, contenido, boton X, tecla J y movimiento con el raton.
+
+LP_Common.lua
+    Inicializa el espacio global compartido LastPurpose. Actualmente es minimo y esta reservado para funcionalidades compartidas futuras.
+
+
+4. FLUJO ACTUAL DE JUEGO
+------------------------
+
+1. Project Zomboid carga LastPurposeB42.
+2. LP_Main carga configuracion, estado, historia y tracker.
+3. OnCreatePlayer obtiene el personaje local.
+4. El mod comprueba si el personaje es Ladron.
+5. Si no es Ladron, no inicia esta historia.
+6. Si es Ladron, crea el tracker y lee su progreso guardado.
+7. Cada minuto de juego se actualiza el progreso.
+8. Al llegar a 15 dias, se activa "El ultimo golpe".
+9. Comienza la mision "Preparar el golpe".
+10. Los requisitos encontrados quedan guardados permanentemente.
+11. Cuando todos estan completos, el estado pasa a completado y la GUI muestra "Ya tienes todo lo necesario".
+
+
+5. DETECCION DE LA PROFESION LADRON
+-----------------------------------
+
+La deteccion usa varios mecanismos para tolerar cambios de API y otros mods:
+
+- Nombre de profesion que contenga "burglar".
+- CharacterTrait.BURGLAR mediante getCharacterTraits().
+- Lista de traits conocidos.
+- API antigua getTraits(), si esta disponible.
+- HasTrait con Burglar, burglar o base:burglar como ultimo recurso.
+
+Las llamadas potencialmente incompatibles se protegen con pcall cuando es necesario.
+
+
+6. PERSISTENCIA Y ESQUEMA DE DATOS
+---------------------------------
+
+El progreso se guarda dentro de:
+
+player:getModData().LastPurpose
+
+Esquema actual: 2
+
+Campos principales:
+
+schema
+    Version del esquema de datos.
+
+active
+    Indica que el prologo ya fue activado.
+
+completed
+    Indica que "Preparar el golpe" fue completada.
+
+stage
+    Etapa narrativa. Actualmente 0 significa previa al prologo, 1 significa mision activa y 2 significa mision completada.
+
+trackerVisible
+    Conserva si el usuario oculto o mostro la interfaz.
+
+objectives
+    Tabla de booleanos con crowbar, screwdriver, flashlight, bag y vehicle.
+
+activatedAtHours
+    Horas sobrevividas en el momento de activar el prologo.
+
+completedAtHours
+    Horas sobrevividas al completar la mision.
+
+La migracion agrega campos ausentes sin borrar progreso anterior. No se modifican ni eliminan archivos de partidas guardadas.
+
+
+7. MISION: PREPARAR EL GOLPE
+----------------------------
+
+La mision comienza despues de activar el prologo y requiere:
+
+- Una palanca.
+- Un destornillador.
+- Una linterna.
+- Una bolsa o mochila equipable.
+- Un vehiculo con motor funcional y combustible.
+
+Tipos de objetos reconocidos:
+
+Palancas:
+- Base.Crowbar
+- Base.CrowbarForged
+
+Destornilladores:
+- Base.Screwdriver
+- Base.Screwdriver_Old
+- Base.Screwdriver_Improvised
+
+Linternas:
+- Base.HandTorch
+- Base.Torch
+
+Bolsa o mochila:
+- InventoryContainer con una ubicacion valida en canBeEquipped(). Esto evita aceptar contenedores ordinarios como cajas de herramientas.
+
+Vehiculo:
+- El personaje debe entrar al vehiculo.
+- isEngineWorking() debe ser verdadero.
+- El deposito GasTank debe existir.
+- getContainerContentAmount() debe ser mayor que cero.
+
+Los requisitos son acumulativos. Una vez detectados quedan marcados aunque el jugador pierda posteriormente el objeto. Esto evita que el progreso narrativo retroceda.
+
+
+8. INTERFAZ
+-----------
+
+El tracker deriva de ISPanel y mide actualmente 345 x 205 pixeles. Aparece cerca de la esquina superior derecha.
+
+Estados visuales:
+
+- Antes del dia 15: dias restantes y barra de progreso dibujada manualmente.
+- Mision activa: lista de cinco requisitos con indicadores pendientes o [OK].
+- Mision terminada: mensaje "Mision completada" y "Ya tienes todo lo necesario".
+
+Controles:
+
+- J: alterna visibilidad.
+- X: oculta el tracker.
+- Arrastre: solo desde la cabecera superior.
+
+El arrastre usa posicion absoluta, captura del raton, liberacion dentro y fuera del panel, comprobacion adicional del boton y limites de pantalla.
+
+El aspecto visual sigue siendo provisional y se redisenara en una fase posterior.
+
+
+9. EVENTOS UTILIZADOS
+---------------------
+
+Events.OnCreatePlayer
+    Detecta el personaje y crea el tracker.
+
+Events.EveryOneMinute
+    Actualiza la activacion y los requisitos de la mision.
+
+Events.OnKeyPressed
+    Gestiona la tecla J.
+
+
+10. ERRORES IMPORTANTES YA RESUELTOS
+------------------------------------
+
+Version 0.1.4:
+    Se elimino un error constante causado por drawProgressBar, que enviaba valores incompatibles a drawRect. La barra actual utiliza drawRect y drawRectBorder manualmente.
+
+Version 0.2.1:
+    Se elimino el recorrido de getCell():getVehicles(), que producia "Object tried to call nil" en vehicles:get(i). El vehiculo se valida ahora cuando el jugador entra en el.
+
+Version 0.3.1:
+    Se corrigio el arrastre erratico. Antes no se capturaba el raton ni se manejaba onMouseUpOutside, por lo que el panel podia quedar pegado al cursor.
+
+
+11. HISTORIAL DE VERSIONES
+--------------------------
+
+0.1.4
+- Prototipo funcional del Ladron.
+- Prologo, tracker, tecla J y persistencia.
+- Eliminacion del error de drawProgressBar.
+
+0.2.0
+- Primera implementacion de "Preparar el golpe".
+- Deteccion de herramientas, bolsa y vehiculo.
+- Restauracion del umbral real de 15 dias.
+
+0.2.1
+- Correccion del error al recorrer vehiculos.
+- Version confirmada como funcional dentro del juego.
+
+0.3.0
+- Separacion del codigo en modulos.
+- Conservacion del comportamiento y datos existentes.
+
+0.3.1
+- Correccion del movimiento y captura del raton.
+- Base estable actual.
+
+
+12. RESPALDOS DISPONIBLES
+-------------------------
+
+Los respaldos se almacenan en LastPurpose/.backups como archivos ZIP. Incluyen versiones funcionales anteriores y copias previas a correcciones importantes.
+
+No deben extraerse directamente sobre una version activa sin realizar antes otro respaldo.
+
+
+13. VISION NARRATIVA PLANIFICADA
+--------------------------------
+
+Activacion inmersiva:
+    Las pistas se recibiran mediante transmisiones en frecuencias civiles, militares o de onda corta. Escuchar el mensaje podra crear una marca en el mapa.
+
+Hitos temporales propuestos:
+
+- Dia 1: El Impacto. Comprender la situacion y escapar de la zona inicial.
+- Semana 1: El Apagon. Corte de servicios y fortificacion inicial.
+- Mes 1: La Gran Travesia. Viaje a grandes ciudades o zonas especificas.
+- Año 1: La Resistencia. Activacion del objetivo final.
+- Post-Año 1: eventos repetibles de mantenimiento, amenazas y hordas.
+
+
+14. HISTORIAS DE PROFESIONES PLANIFICADAS
+-----------------------------------------
+
+Ladron - "El Ultimo Golpe"
+    Prepararse y robar un botin unico de arte u oro en un banco o mansion de Louisville.
+
+Leñador - "La Cabaña Segura"
+    Establecer una vida autosuficiente en bosque profundo y criar animales. Se contempla estres o panico al entrar en ciudades grandes.
+
+Veterano - "Codigo de Honor"
+    Asegurar un puesto militar, reunir un arsenal concreto y limpiar oleadas en el lugar.
+
+Mecanico - "Hasta la Ultima Rueda"
+    Crear un taller y restaurar al cien por ciento tres vehiculos: comun, deportivo e industrial.
+
+Medico - "Querido Doctor..."
+    Infiltrarse en el Hospital de Louisville, recuperar muestras y obtener una recompensa biologica.
+
+Desempleado - "¿Que hare mañana?"
+    Historia configurable relacionada con limpiar el mapa sin respawn, o posibilidad de recibir historias de otras profesiones.
+
+Estas historias son planes de diseño y todavia no estan implementadas.
+
+
+15. INTEGRACIONES PLANIFICADAS
+------------------------------
+
+- This Is Your Life: personalizacion inicial y probabilidades por profesion.
+- Expanded Helicopter Events: helicopteros caidos o rescate final.
+- More Traits: posibles recompensas como el rasgo Inmune.
+
+Las integraciones deben ser opcionales. Last Purpose debe seguir funcionando cuando esos mods no esten instalados. Cada integracion futura debera detectar primero la disponibilidad del mod y aislar sus llamadas.
+
+
+16. PROXIMOS PASOS RECOMENDADOS
+-------------------------------
+
+1. Mantener 0.3.1 como respaldo estable.
+2. Diseñar un modelo generico de historia, mision, etapa, requisito y recompensa.
+3. Migrar "Preparar el golpe" al modelo generico sin alterar las partidas.
+4. Implementar la segunda etapa del Ladron.
+5. Crear una transmision de radio que revele la primera pista.
+6. Añadir una marca controlada en el mapa.
+7. Elegir y validar una ubicacion concreta.
+8. Crear el botin unico y su condicion de recuperacion.
+9. Rediseñar la UI cuando la estructura narrativa este estable.
+10. Añadir las demas profesiones de una en una.
+
+
+17. REGLAS DE DESARROLLO
+------------------------
+
+- Mantener Project Zomboid B42 estable como objetivo principal.
+- Mantener Singleplayer como modo soportado hasta decidir explicitamente añadir multijugador.
+- No borrar ni modificar manualmente partidas guardadas.
+- Crear un respaldo antes de cada cambio importante.
+- Conservar el ID LastPurposeB42.
+- Mantener sincronizados ambos mod.info.
+- Incrementar la version con cada correccion o funcionalidad publicada.
+- Revisar console.txt despues de cada prueba.
+- Proteger APIs dudosas con comprobaciones y pcall.
+- No reintroducir drawProgressBar mientras siga siendo incompatible.
+- Evitar dependencias obligatorias de otros mods.
+- Separar estado, logica narrativa, UI e integraciones.
+- Migrar ModData de forma aditiva y no destructiva.
+
+
+18. PROCEDIMIENTO DE PRUEBA
+---------------------------
+
+Prueba basica despues de cada version:
+
+1. Cerrar completamente Project Zomboid.
+2. Confirmar que Last Purpose [B42] esta activado.
+3. Cargar una partida Singleplayer con profesion Ladron.
+4. Confirmar que aparece el tracker.
+5. Pulsar J varias veces.
+6. Cerrar con X y volver a abrir con J.
+7. Arrastrar y soltar dentro y fuera de la interfaz.
+8. Comprobar los limites de la pantalla.
+9. Confirmar que el estado completado sigue guardado.
+10. Salir normalmente del juego.
+11. Revisar C:\Users\reymi\Zomboid\console.txt.
+12. Buscar LastPurpose, LP_, ERROR, Exception y stack traces.
+
+
+19. LIMITACIONES ACTUALES
+-------------------------
+
+- Solo existe la historia del Ladron.
+- Solo esta implementada la primera mision.
+- No existe todavia sistema de radio propio.
+- No hay marcadores narrativos en el mapa.
+- No existen objetos de botin unicos.
+- No hay localizaciones finales configuradas.
+- No hay recompensas jugables.
+- No se soporta oficialmente multijugador.
+- La posicion de la UI no se guarda todavia.
+- La apariencia visual es provisional.
+- Los textos estan escritos directamente en Lua y aun no usan archivos de traduccion.
+
+
+20. UBICACIONES IMPORTANTES
+---------------------------
+
+Carpeta activa del mod:
+C:\Users\reymi\Zomboid\mods\LastPurpose
+
+Registro del juego:
+C:\Users\reymi\Zomboid\console.txt
+
+Manifiesto principal:
+C:\Users\reymi\Zomboid\mods\LastPurpose\mod.info
+
+Codigo cliente B42:
+C:\Users\reymi\Zomboid\mods\LastPurpose\42\media\lua\client\LastPurpose
+
+
+FIN DEL DOCUMENTO

@@ -1,0 +1,8 @@
+* text=auto
+*.lua text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+mod.info text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary

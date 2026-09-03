@@ -1,0 +1,20 @@
+# Local backups and packaged builds
+.backups/
+*.zip
+
+# Project Zomboid local data
+console.txt
+Saves/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Logs and generated files
+*.log
+build/
+dist/
