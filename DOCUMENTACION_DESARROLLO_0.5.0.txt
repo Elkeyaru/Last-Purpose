@@ -61,3 +61,47 @@ PRUEBA REQUERIDA
 - Validar que 12564,1698 corresponde al banco correcto.
 - Entrar a menos de 35 cuadros y confirmar etapa 5.
 - Revisar console.txt buscando LastPurpose, LP_, ERROR y stack traces.
+ACTUALIZACION 0.5.1 - BOTIN DEL KNOX BANK
+==========================================
+
+Se agrego LP_HeistLoot.lua como modulo cliente independiente. Cuando el Ladron
+alcanza la etapa 5 y se acerca al punto interior del Knox Bank, el mod crea una
+escena fija en las coordenadas 12562, 1690, nivel 1. La escena contiene dos
+cadaveres de zombis y una Base.Bag_MoneyBag en el suelo, marcada internamente con
+LastPurposeLootId para distinguirla de cualquier bolsa vanilla o de otro mod.
+
+Contenido actual de prueba/recompensa:
+- 5 lingotes pequenos de oro (Base.SmallGoldBar).
+- 4 diamantes (Base.Diamond).
+- 6 fajos de dinero (Base.MoneyBundle).
+
+La aparicion queda registrada en player:getModData(), por lo que no se repite al
+cargar la partida. La deteccion de recogida revisa recursivamente el inventario y
+tambien funciona si el jugador guarda el botin dentro de otra mochila. Al recogerlo,
+la historia pasa a la etapa 6: ESCAPA CON EL BOTIN.
+
+Esta entrega no activa aun la alarma ni genera zombis. Esas mecanicas se incorporan
+despues de validar en juego la aparicion, el contenido y la recogida del objeto.
+
+Correccion de prueba: Events.EveryOneMinute no entrega el jugador como argumento.
+updateHeistLoot obtiene ahora getSpecificPlayer(0) cuando el evento la invoca sin
+parametros; antes terminaba silenciosamente y la escena nunca llegaba a crearse.
+
+ALARMA Y EMBOSCADA
+------------------
+LP_HeistEscape.lua inicia la huida al detectar lootTaken. Reproduce HouseAlarm
+durante un maximo controlado de 35 segundos y crea ruido de mundo cada segundo en
+12562,1690 para atraer zombis al banco aunque el jugador ya este huyendo.
+
+ambushWavesSpawned queda guardado en player:getModData(); al recargar solo
+continuan las oleadas pendientes. La version de la emboscada permite migrar una
+sola vez las partidas de prueba al volver a menos de 100 casillas del banco, sin
+crear zombis mientras el jugador esta lejos.
+
+AJUSTE DE PELIGRO V3
+--------------------
+Las hordas virtuales tardaban demasiado en materializarse y llegar. La version 3
+usa addZombiesInOutfit para crear zombis activos a 30-50 casillas. Los 200 zombis
+se reparten en 5 oleadas de 40 cada 0.75 segundos; cada oleada se divide en cinco
+grupos alrededor del banco para evitar una unica masa superpuesta. Cada zombi
+recibe pathToLocation hacia el banco inmediatamente y tambien responde al ruido.

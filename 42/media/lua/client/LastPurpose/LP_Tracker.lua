@@ -95,11 +95,23 @@ function LPGoalTracker:prerender()
    local distanceText=distance>=1000 and string.format("%.1f km",distance/1000) or string.format("%.0f m",distance)
    self:drawText("Direccion: "..direction.."  |  Distancia: "..distanceText,12,124,0.65,0.68,0.72,1,UIFont.Small)
   end
- elseif d.stage>=5 then
+ elseif d.stage==5 then
   local heist=LastPurpose.ensureSelectedHeist(p)
   self:drawText("LUGAR LOCALIZADO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText(heist and heist.title or "El golpe",12,76,0.90,0.74,0.38,1,UIFont.Small)
   self:drawText("Encuentra el botin dentro del edificio.",12,100,0.72,0.78,0.82,1,UIFont.Small)
+  if d.lootSpawned then
+   self:drawText("Busca junto a los dos cadaveres.",12,124,0.65,0.68,0.72,1,UIFont.Small)
+  end
+ elseif d.stage>=6 then
+ self:drawText("ESCAPA CON EL BOTIN",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText("Botin del Knox Bank asegurado.",12,76,0.90,0.74,0.38,1,UIFont.Small)
+  if d.ambushTriggered and not d.ambushCompleted then
+   self:drawText("ALERTA: escapa del banco ahora.",12,100,0.92,0.32,0.28,1,UIFont.Small)
+   self:drawText(string.format("Amenaza detectada: oleada %d / 5",tonumber(d.ambushWavesSpawned) or 0),12,124,0.82,0.68,0.58,1,UIFont.Small)
+  else
+   self:drawText("Sal de Louisville con vida.",12,100,0.72,0.78,0.82,1,UIFont.Small)
+  end
  elseif d.completed then
   self:drawText("PREPARAR EL GOLPE",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText("Mision completada",12,76,0.45,0.86,0.55,1,UIFont.Small)

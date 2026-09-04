@@ -1,5 +1,5 @@
 LastPurpose = LastPurpose or {}
-LastPurpose.VERSION = "0.5.0"
+LastPurpose.VERSION = "0.5.2"
 LastPurpose.DEBUG_FAST_ACTIVATION = true
 LastPurpose.ACTIVATION_MINUTES = 20
 LastPurpose.ACTIVATION_DAYS = LastPurpose.ACTIVATION_MINUTES / (24 * 60)

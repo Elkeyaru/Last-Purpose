@@ -8,7 +8,7 @@ The current prototype focuses on the Burglar story, **“The Last Heist”** (`E
 
 ## Current version
 
-**0.5.0 (testing)** — Singleplayer, Project Zomboid Build 42 stable.
+**0.5.2 (testing)** — Singleplayer, Project Zomboid Build 42 stable.
 
 Latest stable release: **0.4.1**.
 
@@ -25,6 +25,9 @@ Implemented:
 - Data-driven heist catalog with a persistent selected job.
 - Blue X map marker for the first Louisville bank target.
 - Automatic arrival detection around the selected building.
+- Unique Knox Bank loot bag with gold, diamonds, and bundled money.
+- Automatic detection when the player takes the heist loot.
+- A 35-second bank alarm and a staged 200-zombie escape encounter.
 - Modular Lua architecture.
 - Persistent random radio frequency and six-hour narrative broadcasts.
 - Second story stage: intercept the conversation about the Louisville bank.

@@ -2,6 +2,27 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [0.5.2] - testing
+
+- Added a 35-second house alarm when the unique loot bag is taken.
+- Added a performance-controlled 200-zombie encounter around the bank.
+- Added a one-time test-save migration for encounter tuning.
+- Persisted the wave count so saving and loading cannot duplicate completed waves.
+- Replaced delayed virtual hordes with directly spawned active zombies.
+- Concentrated the encounter into five waves of forty, each split into five surrounding groups.
+- Reduced the spawn ring to 30-50 tiles and the wave delay to 0.75 seconds.
+- Ordered every spawned zombie to move toward the bank immediately.
+
+## [0.5.1] - testing
+
+- Added the unique Knox Bank loot bag after reaching the heist location.
+- The bag contains five small gold bars, four diamonds, and six bundles of money.
+- Added a fixed narrative loot scene at 12562, 1690, level 1.
+- Added two dead zombies beside the loot bag, created only once per save.
+- Added recursive pickup detection and the escape-with-the-loot mission stage.
+- Kept existing 0.5.0 saves compatible without resetting story progress.
+- Fixed the minute-event callback so it obtains the local player correctly before creating the scene.
+
 ## [0.5.0] - testing
 
 - Added a data-driven heist catalog shared by client and server.
