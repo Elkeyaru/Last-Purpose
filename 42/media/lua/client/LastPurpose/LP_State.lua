@@ -33,8 +33,14 @@ function LastPurpose.isBurglar(p)
 end
 function LastPurpose.getData(p)
  local root=p:getModData()
- if type(root[LastPurpose.SAVE_KEY])~="table" then root[LastPurpose.SAVE_KEY]={schema=5,active=false,completed=false,stage=0,trackerVisible=true,objectives={}} end
- local d=root[LastPurpose.SAVE_KEY]; d.schema=5
+ if type(root[LastPurpose.SAVE_KEY])~="table" then root[LastPurpose.SAVE_KEY]={schema=7,storyFlowVersion=2,active=false,completed=false,stage=0,trackerVisible=true,objectives={}} end
+ local d=root[LastPurpose.SAVE_KEY]
+ if (tonumber(d.schema) or 0)<7 then
+  -- Solo conservamos la ruta directa si el jugador ya habia descubierto el banco.
+  d.storyFlowVersion=(tonumber(d.stage) or 0)>=4 and 1 or 2
+ end
+ d.schema=7
+ if d.storyFlowVersion==nil then d.storyFlowVersion=2 end
  if d.stage==nil then d.stage=d.active and 1 or 0 end
  if d.completed==nil then d.completed=false end
  if d.trackerVisible==nil then d.trackerVisible=true end

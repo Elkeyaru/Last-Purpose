@@ -1,24 +1,28 @@
 LastPurpose = LastPurpose or {}
 
 local LOOT_ID = "louisville_knox_bank"
-local BAG_TYPE = "Base.Bag_MoneyBag"
+local BAG_TYPE = "LastPurpose.SealedKnoxBankLoot"
 local LOOT_X, LOOT_Y, LOOT_Z = 12562, 1690, 1
-local SCENE_VERSION = 2
+local SCENE_VERSION = 3
+
+function LastPurpose.applyBlackLootVisual(item)
+    if not item then return end
+    pcall(function()
+        item:setColorRed(0.08)
+        item:setColorGreen(0.08)
+        item:setColorBlue(0.08)
+        item:setColor(Color.new(0.08, 0.08, 0.08))
+        item:setCustomColor(true)
+    end)
+end
 
 local function markLootBag(bag)
     if not bag then return nil end
+    LastPurpose.applyBlackLootVisual(bag)
     local itemData = bag:getModData()
     itemData.LastPurposeLootId = LOOT_ID
-    itemData.LastPurposeLootVersion = 1
-    if bag.setName then bag:setName("Botin del Knox Bank") end
-    if bag.setCustomName then bag:setCustomName(true) end
-
-    local contents = bag:getInventory()
-    if contents then
-        contents:AddItems("Base.SmallGoldBar", 5)
-        contents:AddItems("Base.Diamond", 4)
-        contents:AddItems("Base.MoneyBundle", 6)
-    end
+    itemData.LastPurposeLootVersion = 2
+    itemData.LastPurposeLootSealed = true
     return bag
 end
 
@@ -43,7 +47,7 @@ local function spawnLootScene(data)
     end
     local bag = markLootBag(square:AddWorldInventoryItem(BAG_TYPE, 0.5, 0.5, 0))
     if not bag then
-        print("[LastPurpose] No se pudo crear Base.Bag_MoneyBag en la casilla del botin")
+        print("[LastPurpose] No se pudo crear la bolsa sellada del Knox Bank")
         return false
     end
 
@@ -69,7 +73,10 @@ function LastPurpose.findHeistLootBag(container, seen)
         local item = items:get(i)
         if item then
             local itemData = item:getModData()
-            if itemData and itemData.LastPurposeLootId == LOOT_ID then return item end
+            if itemData and itemData.LastPurposeLootId == LOOT_ID then
+                LastPurpose.applyBlackLootVisual(item)
+                return item
+            end
             if item.getInventory then
                 local found = LastPurpose.findHeistLootBag(item:getInventory(), seen)
                 if found then return found end
@@ -83,13 +90,15 @@ function LastPurpose.updateHeistLoot(player)
     player = player or LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    if data.stage < 5 then return end
+    local readyStage = data.storyFlowVersion == 2 and 9 or 5
+    local takenStage = data.storyFlowVersion == 2 and 10 or 6
+    if data.stage < readyStage then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
     if not heist or heist.id ~= LOOT_ID then return end
 
     if not data.lootTaken and data.lootSceneVersion ~= SCENE_VERSION then
         if not data.lootMigrationPrinted then
-            print("[LastPurpose] Migrando el botin guardado a la escena fija v2")
+            print("[LastPurpose] Migrando el botin guardado a la escena sellada v3")
             data.lootMigrationPrinted = true
         end
         data.lootSpawned = false
@@ -106,14 +115,15 @@ function LastPurpose.updateHeistLoot(player)
 
     if LastPurpose.findHeistLootBag(player:getInventory()) then
         data.lootTaken = true
+        LastPurpose.heistEscapeActive = true
         data.lootTakenAtHours = player:getHoursSurvived()
-        data.stage = 6
+        data.stage = takenStage
         if HaloTextHelper then
-            HaloTextHelper.addTextWithArrow(player, "Botin asegurado", true, 220, 185, 70)
+            HaloTextHelper.addTextWithArrow(player, "Botín asegurado", true, 220, 185, 70)
         end
         LastPurpose.showThought(player, {
             "Ya lo tengo.",
-            "Ahora tengo que salir de aqui con vida."
+            "Ahora tengo que salir de aquí con vida."
         })
         print("[LastPurpose] El jugador recogio el botin del Knox Bank")
     end

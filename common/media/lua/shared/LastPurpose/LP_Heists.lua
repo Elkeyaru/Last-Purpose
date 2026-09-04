@@ -9,15 +9,29 @@ LastPurpose.HEISTS = {
         x = 12564,
         y = 1698,
         arrivalRadius = 35,
+        clue = {
+            x = 12180,
+            y = 1888,
+            z = 0,
+            arrivalRadius = 28,
+            title = "PUNTO DE REUNION",
+            destination = "Un callejon al oeste de Louisville"
+        },
+        getaway = {
+            x = 12582,
+            y = 1722,
+            radius = 28
+        },
         marker = "X",
         dialogue = {
-            "<bzzt> ...Confirmaste el lugar?...",
-            "Si. El Knox Bank de Louisville sigue cerrado desde la evacuacion.",
-            "Dicen que dejaron dinero, joyas y las piezas de la boveda privada.",
-            "Entraremos por la parte trasera. Nos vemos alli cuando oscurezca.",
-            "No llegues tarde. Esta es nuestra ultima oportunidad. <fzzt>"
+            "<bzzt> Soy yo. Escucha con atención...",
+            "Los documentos siguen escondidos en el punto de reunión.",
+            "El callejón está al oeste de Louisville. Nadie debería encontrarlos.",
+            "Con esa nota sabremos dónde guardaron el botín antes de evacuar.",
+            "Voy a seguir llamando hasta que respondas.",
+            "¿Me copiaste? <fzzt>"
         },
-        finalLine = "Esta es nuestra ultima oportunidad"
+        finalLine = "Me copiaste?"
     }
 }
 

@@ -11,6 +11,7 @@ local SPAWN_MAX_RADIUS = 50
 local AMBUSH_VERSION = 3
 
 LastPurpose.heistAlarmRuntime = LastPurpose.heistAlarmRuntime or {}
+LastPurpose.heistEscapeActive = LastPurpose.heistEscapeActive or false
 
 local function startAlarm(player, data, now)
     local runtime = LastPurpose.heistAlarmRuntime
@@ -78,10 +79,15 @@ local function stopAlarm(player, data)
 end
 
 function LastPurpose.updateHeistEscape()
+    if not LastPurpose.heistEscapeActive then return end
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    if not data.lootTaken or data.stage < 6 then return end
+    local lootStage = data.storyFlowVersion == 2 and 10 or 6
+    if not data.lootTaken or data.stage < lootStage then
+        LastPurpose.heistEscapeActive = false
+        return
+    end
 
     if data.ambushVersion ~= AMBUSH_VERSION then
         local dx, dy = player:getX() - ALARM_X, player:getY() - ALARM_Y
@@ -93,7 +99,10 @@ function LastPurpose.updateHeistEscape()
         data.ambushVersion = AMBUSH_VERSION
         print("[LastPurpose] Emboscada migrada al asalto inmediato v3")
     end
-    if data.ambushCompleted then return end
+    if data.ambushCompleted then
+        LastPurpose.heistEscapeActive = false
+        return
+    end
 
     local now = getTimestampMs()
     local runtime = LastPurpose.heistAlarmRuntime
@@ -113,4 +122,14 @@ function LastPurpose.updateHeistEscape()
     if now - runtime.startedAt >= ALARM_DURATION_MS and (tonumber(data.ambushWavesSpawned) or 0) >= WAVE_COUNT then
         stopAlarm(player, data)
     end
+end
+
+function LastPurpose.refreshHeistEscape()
+    local player = LastPurpose.getPlayerSafe(0)
+    if not player or not LastPurpose.isBurglar(player) then return end
+    local data = LastPurpose.getData(player)
+    local lootStage = data.storyFlowVersion == 2 and 10 or 6
+    LastPurpose.heistEscapeActive = data.lootTaken == true
+        and data.stage >= lootStage
+        and data.ambushCompleted ~= true
 end

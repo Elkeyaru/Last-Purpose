@@ -1,0 +1,228 @@
+LAST PURPOSE — DOCUMENTACIÓN DEL PROYECTO
+Versión: 0.7.0 estable
+Juego: Project Zomboid Build 42 estable
+Modo compatible actual: Singleplayer
+Autor: ElKeyaru
+Repositorio: https://github.com/Elkeyaru/Last-Purpose
+Fecha: 4 de septiembre de 2026
+
+======================================================================
+1. PROPÓSITO DEL MOD
+======================================================================
+
+Last Purpose añade historias y objetivos de mid-game y late-game ligados a la
+identidad del superviviente. Su finalidad es ofrecer motivos para preparar una
+base, viajar, investigar, asumir riesgos y regresar con recompensas valiosas.
+
+La versión 0.7.0 contiene una historia jugable completa para el Ladrón:
+“El último golpe”. El sistema está preparado para que en el futuro se elija un
+golpe aleatorio por partida y se incorporen historias de otras profesiones.
+
+======================================================================
+2. BUCLE JUGABLE DE “EL ÚLTIMO GOLPE”
+======================================================================
+
+1. El personaje Ladrón sobrevive 15 días.
+2. Comienza “Preparar el golpe”.
+3. El jugador consigue una palanca, un destornillador, una linterna, una bolsa
+   o mochila y un vehículo funcional con combustible.
+4. Fabrica y coloca una mesa de planificación; esta ubicación se convierte en
+   el refugio al que deberá regresar.
+5. El personaje piensa que debe revisar la radio.
+6. La interfaz muestra diez frecuencias posibles. Solo una contiene la señal.
+7. El transmisor desconocido repite su mensaje cada 30 minutos del juego.
+8. Al escuchar el mensaje completo aparece una pista en el mapa.
+9. El jugador llega al punto de reunión y recupera una nota cifrada.
+10. La nota revela el Knox Bank de Louisville.
+11. El jugador reconoce el banco sin entrar.
+12. Prepara un vehículo funcional con combustible en la zona de fuga.
+13. Espera la ventana nocturna, entre las 20:00 y las 05:00.
+14. Entra al banco y encuentra una bolsa sellada junto a dos cadáveres.
+15. Al recogerla se activa una alarma de 35 segundos y cinco oleadas de 40
+    zombis, 200 en total, avanzan hacia el banco.
+16. El jugador escapa al menos 520 casillas con la bolsa.
+17. El mapa pasa a señalar el refugio establecido por la mesa.
+18. Al regresar, usa la mesa para revisar el botín.
+19. La bolsa se abre, se entregan las recompensas y termina la misión.
+
+======================================================================
+3. RECOMPENSA
+======================================================================
+
+La bolsa permanece sellada durante la huida. No se puede consultar ni usar como
+contenedor hasta regresar a la mesa de planificación.
+
+Al revisar el botín se transforma en una bolsa negra de 28 unidades de
+capacidad y contiene:
+
+- 5 lingotes pequeños de oro.
+- 4 diamantes.
+- 6 fajos de dinero.
+- Antibióticos, analgésicos y agujas de sutura.
+- Vendas y toallitas con alcohol.
+- Pilas, cinta adhesiva y pegamento para madera.
+- Un bidón lleno de gasolina.
+- Un walkie-talkie militar.
+- Comida enlatada.
+- Tres cajas de munición elegidas aleatoriamente.
+
+El personaje recibe además dos niveles de Destreza (Nimble), sin superar el
+nivel máximo 10. Todas las recompensas tienen protección persistente contra
+duplicación.
+
+======================================================================
+4. RADIO E INMERSIÓN
+======================================================================
+
+La frecuencia real se elige dinámicamente en el rango FM permitido. Antes de
+registrarla se consultan canales vanilla y canales declarados por otros mods.
+Si existe una colisión, se elige otra frecuencia disponible.
+
+La interfaz nunca muestra directamente la frecuencia correcta. Presenta diez
+opciones válidas y libres; el jugador debe probarlas. La transmisión se repite
+cada media hora para evitar esperas excesivas y el interlocutor insiste como si
+intentara comunicarse con otra persona, terminando con “¿Me copiaste?”.
+
+El progreso solo avanza después de recibir la última línea de la conversación.
+La reacción del personaje aparece cinco segundos después y permanece ocho
+segundos en pantalla.
+
+======================================================================
+5. INTERFAZ
+======================================================================
+
+La tecla J muestra u oculta el rastreador. Su posición se guarda en los datos
+del personaje. Puede arrastrarse desde la barra superior; el botón de cierre no
+inicia el arrastre y soltar el ratón fuera del panel cancela correctamente la
+captura.
+
+Código visual actual:
+
+- Azul: títulos, propósito y pensamientos del personaje.
+- Dorado: pistas, destinos y elementos importantes.
+- Verde: requisitos cumplidos y resultados positivos.
+- Rojo: alarma, peligro o requisito perdido.
+- Gris: instrucciones secundarias.
+
+La interfaz actual es funcional, pero está prevista una reconstrucción visual
+posterior. La versión 0.7.0 prioriza estabilidad y legibilidad.
+
+======================================================================
+6. PERSISTENCIA Y COMPATIBILIDAD
+======================================================================
+
+El progreso se guarda en player:getModData() bajo la clave “LastPurpose”. La
+frecuencia, las opciones de radio y el golpe seleccionado se guardan en los
+datos globales del mundo.
+
+El esquema actual es 7. Las partidas antiguas que ya habían descubierto el
+banco mantienen el recorrido directo de 0.6.x. Las partidas nuevas utilizan el
+recorrido ampliado de 0.7.0. No se modifican ni eliminan partidas guardadas.
+
+La versión principal sigue siendo Project Zomboid Build 42 estable. El mod no
+depende obligatoriamente de otros mods.
+
+======================================================================
+7. ESTRUCTURA PRINCIPAL
+======================================================================
+
+42/mod.info
+  Metadatos específicos de Build 42 y registro del paquete de tiles.
+
+42/media/lua/client/LastPurpose/LP_Config.lua
+  Versión, tiempo de activación, tecla y catálogo de requisitos.
+
+LP_State.lua
+  Detección del Ladrón, creación y migración de datos persistentes.
+
+LP_BurglarStory.lua
+  Activación del prólogo y escaneo del equipo necesario.
+
+LP_Thought.lua
+  Pensamientos flotantes azules de ocho segundos.
+
+LP_RadioStory.lua
+  Opciones de frecuencia, detección del mensaje y reacción del personaje.
+
+LP_HeistStory.lua
+  Selección del golpe, marcadores del mapa y compatibilidad con el flujo viejo.
+
+LP_Investigation.lua
+  Punto de reunión, nota, reconocimiento, vehículo de fuga y ventana nocturna.
+
+LP_HeistLoot.lua
+  Escena del banco, bolsa sellada y detección de recogida.
+
+LP_HeistEscape.lua
+  Alarma, ruido, oleadas y control del asalto.
+
+LP_SafehouseAnchor.lua
+  Registro de la mesa, regreso al refugio, apertura y recompensas.
+
+LP_Tracker.lua
+  Interfaz, arrastre, estados y objetivos visibles.
+
+LP_Main.lua
+  Orden de carga y registro centralizado de eventos.
+
+42/media/lua/server/LastPurpose/LP_RadioChannel.lua
+  Elección segura de frecuencia y emisiones cada media hora.
+
+common/media/lua/shared/LastPurpose/LP_Heists.lua
+  Catálogo de golpes y datos narrativos configurables.
+
+common/media/scripts/
+  Definiciones de la mesa, la nota y las bolsas del golpe.
+
+======================================================================
+8. OPTIMIZACIÓN
+======================================================================
+
+Las tareas de progresión, mesa, investigación, botín y mapa se ejecutan una vez
+por minuto del juego. El marcador solo se dibuja cuando el mapa está abierto.
+
+La lógica rápida de la emboscada permanece dormida hasta recoger el botín y se
+desactiva al terminar las cinco oleadas. Solamente el temporizador visual de los
+pensamientos conserva una comprobación ligera por fotograma.
+
+La búsqueda de objetos y mesas evita ciclos mediante tablas de elementos ya
+visitados. La escena narrativa y las recompensas utilizan versiones y banderas
+persistentes para no generarse repetidamente.
+
+======================================================================
+9. VALIDACIÓN DE 0.7.0
+======================================================================
+
+El recorrido ampliado fue completado de principio a fin en una partida de
+prueba. console.txt confirmó todos los hitos, las cinco oleadas, los 200 zombis,
+la huida, el regreso y la recompensa. No se encontraron excepciones de Lua
+atribuibles a Last Purpose.
+
+Los avisos de creación de zombis mostrados por Build 42 son mensajes internos
+del motor y no fallos del mod. Otros errores observados en el registro proceden
+del juego base, mapas u otros mods.
+
+======================================================================
+10. DIRECCIÓN FUTURA
+======================================================================
+
+- Rediseñar visualmente el rastreador sin cambiar su lógica persistente.
+- Añadir varios golpes posibles: banco, exposición de arte, concesionario y
+  penthouse, seleccionando uno por partida.
+- Permitir historias posteriores de Leñador, Veterano, Mecánico, Médico y
+  Desempleado.
+- Mantener opcionales las integraciones con This Is Your Life, Expanded
+  Helicopter Events y More Traits.
+- Añadir eventos de año uno y contenido repetible de post-endgame.
+
+======================================================================
+11. ESTADO DE PUBLICACIÓN
+======================================================================
+
+La versión 0.7.0 es el primer punto estable con el recorrido narrativo ampliado.
+La release pública contiene exclusivamente los archivos necesarios para que el
+mod funcione. Los recursos de desarrollo, respaldos, documentación histórica y
+paquetes de prueba no forman parte del ZIP jugable.
+
+Last Purpose es un mod no oficial de Project Zomboid. Project Zomboid y sus
+recursos pertenecen a The Indie Stone.

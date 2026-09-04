@@ -2,6 +2,7 @@ LastPurposeRadio = LastPurposeRadio or {}
 require "LastPurpose/LP_Heists"
 LastPurposeRadio.UUID = "LP-HEIST-001"
 LastPurposeRadio.MODDATA_KEY = "LastPurposeRadioFrequency"
+LastPurposeRadio.CANDIDATES_KEY = "LastPurposeRadioCandidates"
 LastPurposeRadio.MIN_FREQUENCY = 88000
 LastPurposeRadio.MAX_FREQUENCY = 108000
 LastPurposeRadio.FREQUENCY_STEP = 200
@@ -65,11 +66,47 @@ local function getFrequency(scriptManager)
     return frequency
 end
 
+local function validCandidateList(list, occupied, selected)
+    if type(list) ~= "table" or #list ~= 10 then return false end
+    local seen, containsSelected = {}, false
+    for _, frequency in ipairs(list) do
+        if not isValidFrequency(frequency) or seen[frequency] then return false end
+        if occupied[frequency] and frequency ~= selected then return false end
+        seen[frequency] = true
+        if frequency == selected then containsSelected = true end
+    end
+    return containsSelected
+end
+
+local function createCandidateList(occupied, selected)
+    local pool = {}
+    for frequency = LastPurposeRadio.MIN_FREQUENCY, LastPurposeRadio.MAX_FREQUENCY, LastPurposeRadio.FREQUENCY_STEP do
+        if frequency ~= selected and not occupied[frequency] then pool[#pool + 1] = frequency end
+    end
+    local list = { selected }
+    while #list < 10 and #pool > 0 do
+        local index = ZombRand(#pool) + 1
+        list[#list + 1] = table.remove(pool, index)
+    end
+    for index = #list, 2, -1 do
+        local target = ZombRand(index) + 1
+        list[index], list[target] = list[target], list[index]
+    end
+    return list
+end
+
 function LastPurposeRadio.onLoadRadioScripts(scriptManager)
     local frequency = getFrequency(scriptManager)
     if not frequency then
         print("[LastPurpose] ERROR: no hay frecuencias de radio disponibles entre 88.0 y 108.0 MHz")
         return
+    end
+    local worldData = getGameTime():getModData()
+    local occupied = getOccupiedFrequencies(scriptManager)
+    local candidates = worldData[LastPurposeRadio.CANDIDATES_KEY]
+    if not validCandidateList(candidates, occupied, frequency) then
+        candidates = createCandidateList(occupied, frequency)
+        worldData[LastPurposeRadio.CANDIDATES_KEY] = candidates
     end
     local channel = DynamicRadioChannel.new("Senal desconocida", frequency, ChannelCategory.Bandit, LastPurposeRadio.UUID)
     scriptManager:AddChannel(channel, false)
@@ -78,7 +115,7 @@ function LastPurposeRadio.onLoadRadioScripts(scriptManager)
 end
 
 local function createBroadcast(worldAgeHours)
-    local broadcast = RadioBroadCast.new("LP-HEIST-" .. tostring(math.floor(worldAgeHours / 6)), -1, -1)
+    local broadcast = RadioBroadCast.new("LP-HEIST-" .. tostring(math.floor(worldAgeHours * 2)), -1, -1)
     local selected = getGameTime():getModData().LastPurposeSelectedHeist
     local heist = LastPurpose.getHeist(selected) or LastPurpose.getHeist(LastPurpose.HEIST_ORDER[1])
     for index, text in ipairs(heist.dialogue) do
@@ -88,20 +125,14 @@ local function createBroadcast(worldAgeHours)
     return broadcast
 end
 
-local function isStoryHour(hour)
-    return hour == 2 or hour == 8 or hour == 14 or hour == 20
-end
-
-function LastPurposeRadio.onEveryHours()
+function LastPurposeRadio.onEveryTenMinutes()
     if not LastPurposeRadio.channel then return end
     local gameTime = getGameTime()
-    local hour = gameTime:getHour()
-    local slot = math.floor(gameTime:getWorldAgeHours())
+    local slot = math.floor(gameTime:getWorldAgeHours() * 2)
     if LastPurposeRadio.lastBroadcastSlot == slot then return end
     LastPurposeRadio.lastBroadcastSlot = slot
-    if not isStoryHour(hour) then return end
     LastPurposeRadio.channel:setAiringBroadcast(createBroadcast(gameTime:getWorldAgeHours()))
 end
 
 Events.OnLoadRadioScripts.Add(LastPurposeRadio.onLoadRadioScripts)
-Events.EveryHours.Add(LastPurposeRadio.onEveryHours)
+Events.EveryTenMinutes.Add(LastPurposeRadio.onEveryTenMinutes)

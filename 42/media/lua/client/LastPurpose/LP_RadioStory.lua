@@ -1,9 +1,15 @@
 LastPurpose = LastPurpose or {}
 LastPurpose.RADIO_FREQUENCY_KEY = "LastPurposeRadioFrequency"
+LastPurpose.RADIO_CANDIDATES_KEY = "LastPurposeRadioCandidates"
 
 function LastPurpose.getStoryFrequency()
     local value = getGameTime():getModData()[LastPurpose.RADIO_FREQUENCY_KEY]
     return type(value) == "number" and value or nil
+end
+
+function LastPurpose.getStoryFrequencyCandidates()
+    local values = getGameTime():getModData()[LastPurpose.RADIO_CANDIDATES_KEY]
+    return type(values) == "table" and values or nil
 end
 
 function LastPurpose.updateRadioStory(player)
@@ -14,8 +20,8 @@ function LastPurpose.updateRadioStory(player)
         data.stage = 3
         data.radioPromptShown = true
         LastPurpose.showThought(player, {
-            "Mmm... deberia revisar la radio.",
-            "Quizas encuentre mas informacion."
+            "Mmm... debería revisar la radio.",
+            "Quizás encuentre más información."
         })
     end
 end
@@ -29,6 +35,7 @@ function LastPurpose.onDeviceText(guid, interactCodes, x, y, z, line)
     if not heist or string.find(line, heist.finalLine, 1, true) == nil then return end
 
     data.stage = 4
+    data.storyFlowVersion = data.storyFlowVersion or 2
     data.radioTransmissionHeard = true
     data.radioHeardAtHours = player:getHoursSurvived()
     LastPurpose.radioReactionAt = getTimestampMs() + 5000
@@ -40,7 +47,7 @@ function LastPurpose.updatePendingRadioReaction()
     local player = LastPurpose.getPlayerSafe(0)
     if not player then return end
     LastPurpose.showThought(player, {
-        "Asi que van tras ese botin...",
-        "Ese golpe sera mio."
+        "Así que van tras ese botín...",
+        "Primero encontraré ese punto de reunión."
     })
 end

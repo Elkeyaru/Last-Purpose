@@ -21,12 +21,12 @@ function LastPurpose.updateProgress(p)
  local d=LastPurpose.getData(p)
  if not d.active and LastPurpose.getDaysSurvived(p)>=LastPurpose.ACTIVATION_DAYS then
   d.active=true; d.stage=1; d.activatedAtHours=p:getHoursSurvived()
-  if HaloTextHelper then HaloTextHelper.addTextWithArrow(p,"Nuevo objetivo: El ultimo golpe",true,180,210,255) end
+  if HaloTextHelper then HaloTextHelper.addTextWithArrow(p,"Nuevo objetivo: El último golpe",true,100,190,255) end
  end
  if not d.active or d.completed then return end
  scan(p:getInventory(),d.objectives); if p.getVehicle and hasVehicle(p) then d.objectives.vehicle=true end
  if complete(d.objectives) then d.completed=true; d.stage=2; d.completedAtHours=p:getHoursSurvived()
-  if HaloTextHelper then HaloTextHelper.addTextWithArrow(p,"Mision completada: Preparar el golpe",true,120,220,140) end
+  if HaloTextHelper then HaloTextHelper.addTextWithArrow(p,"Misión completada: Preparar el golpe",true,120,220,140) end
  end
 end
 function LastPurpose.onEveryOneMinute()

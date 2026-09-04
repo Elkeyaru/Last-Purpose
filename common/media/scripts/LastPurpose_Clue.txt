@@ -1,0 +1,13 @@
+module LastPurpose
+{
+    item KnoxMeetingNote
+    {
+        DisplayCategory = Literature,
+        ItemType = base:literature,
+        Weight = 0.1,
+        Icon = Note1,
+        StaticModel = Note1,
+        WorldStaticModel = Note1,
+        ReadType = photo,
+    }
+}

@@ -1,0 +1,35 @@
+module LastPurpose
+{
+    item SealedKnoxBankLoot
+    {
+        DisplayCategory = Bag,
+        ItemType = base:normal,
+        Weight = 12.0,
+        Icon = Duffelbag,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        WorldStaticModel = DuffelBag_Ground,
+    }
+
+    item OpenKnoxBankLootBag
+    {
+        DisplayCategory = Bag,
+        ItemType = base:container,
+        Weight = 2.0,
+        Icon = Duffelbag,
+        CanBeEquipped = base:back,
+        CanHaveHoles = false,
+        Capacity = 28,
+        CloseSound = CloseBag,
+        ClothingItem = Bag_BurglarBag,
+        EquipSound = EquipDuffleBag,
+        OpenSound = OpenBag,
+        PutInSound = PutItemInBag,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        RunSpeedModifier = 0.95,
+        WeightReduction = 65,
+        WorldStaticModel = DuffelBag_Ground,
+        Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
+    }
+}

@@ -8,14 +8,14 @@ The current prototype focuses on the Burglar story, **“The Last Heist”** (`E
 
 ## Current version
 
-**0.6.0 (validated)** — Singleplayer, Project Zomboid Build 42 stable.
+**0.7.0 (stable)** — Singleplayer, Project Zomboid Build 42 stable.
 
-Latest validated release: **0.6.0**.
+Latest validated release: **0.7.0**.
 
 Implemented:
 
 - Burglar detection through Build 42 profession and trait APIs.
-- Prologue activation after 20 in-game minutes in the current debugging build.
+- Prologue activation after 15 survived days.
 - First mission: **“Prepare the Heist”**.
 - Automatic tracking of a crowbar, screwdriver, flashlight, wearable bag/backpack, and a working vehicle with fuel.
 - Persistent progression through `player:getModData()`.
@@ -31,13 +31,18 @@ Implemented:
 - Craftable, rotatable wooden planning table with native Build 42 sprites and an open book.
 - Automatic safehouse registration when the planning table is placed, indoors or outdoors.
 - Dynamic return objective after escaping 520 tiles from the bank with the loot.
+- One-time completion reward at the safehouse: two Nimble levels and a mid/late-game supply package.
+- Sealed bank loot that cannot be opened during the escape; reviewing it unlocks a 28-capacity reward bag.
 - Modular Lua architecture.
-- Persistent random radio frequency and six-hour narrative broadcasts.
+- Collision-aware random radio frequency and narrative broadcasts every 30 in-game minutes.
+- The tracker presents ten possible frequencies without revealing which one is correct.
 - Second story stage: intercept the conversation about the Louisville bank.
+- Extended pre-heist investigation: meeting point, coded note, bank reconnaissance, getaway vehicle, and a night-time entry window.
+- Fixed black visual identity for the sealed loot and its unlocked reward bag.
 
 ## Planned direction
 
-The long-term design includes immersive radio transmissions, map clues, profession-specific story chains, important locations, unique rewards, and post-year-one repeatable events.
+The long-term design includes one randomly selected heist per playthrough, followed by access to other profession story chains, important locations, unique rewards, and post-year-one repeatable events.
 
 Planned profession stories include Burglar, Lumberjack, Veteran, Mechanic, Doctor, and Unemployed.
 
@@ -70,7 +75,7 @@ LastPurpose/
     └── lua/shared/
 ```
 
-See `DOCUMENTACION_LastPurpose_0.6.0.txt` for the complete Spanish technical and design documentation.
+See `DOCUMENTACION_LastPurpose_0.7.0.txt` for the complete Spanish technical and design documentation.
 
 ## Development status
 

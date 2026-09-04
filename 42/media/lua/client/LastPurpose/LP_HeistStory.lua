@@ -4,13 +4,21 @@ require "ISUI/Maps/ISMap"
 LastPurpose = LastPurpose or {}
 
 local function getMapTarget(data, heist)
-    if data.stage >= 7 then
+    local expanded = data.storyFlowVersion == 2
+    local returnStage = expanded and 11 or 7
+    if data.stage >= returnStage then
         if data.safehousePlaced and data.safehouseX and data.safehouseY then
-            return data.safehouseX, data.safehouseY, "REFUGIO", true
+            return data.safehouseX, data.safehouseY, "REFUGIO", true, "safehouse"
         end
         return nil
     end
-    return heist.x, heist.y, "OBJETIVO", false
+    if expanded and (data.stage == 4 or data.stage == 5) and heist.clue then
+        return heist.clue.x, heist.clue.y, "PISTA", false, "clue"
+    end
+    if expanded and data.stage == 7 and heist.getaway then
+        return heist.getaway.x, heist.getaway.y, "VEHICULO DE FUGA", false, "getaway"
+    end
+    return heist.x, heist.y, "OBJETIVO", false, "heist"
 end
 
 function LastPurpose.ensureSelectedHeist(player)
@@ -30,10 +38,11 @@ function LastPurpose.tryAddHeistMapMarker(player)
     if data.stage < 4 then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
     if not heist then return end
-    local targetX, targetY, _, isSafehouse = getMapTarget(data, heist)
+    local targetX, targetY, _, isSafehouse, targetKey = getMapTarget(data, heist)
     if not targetX then return end
 
-    local revealed = isSafehouse and data.safehouseAreaRevealed or data.mapAreaRevealed
+    local revealKey = "mapAreaRevealed_" .. tostring(targetKey or "heist")
+    local revealed = data[revealKey]
     if not revealed then
         local revealRadius = 18
         WorldMapVisited.getInstance():setKnownInSquares(
@@ -42,8 +51,7 @@ function LastPurpose.tryAddHeistMapMarker(player)
             targetX + revealRadius,
             targetY + revealRadius
         )
-        if isSafehouse then data.safehouseAreaRevealed = true
-        else data.mapAreaRevealed = true end
+        data[revealKey] = true
         print(isSafehouse and "[LastPurpose] Sector del refugio revelado en el mapa" or "[LastPurpose] Sector del golpe revelado en el mapa")
     end
 
@@ -90,6 +98,7 @@ end
 function LastPurpose.updateHeistArrival(player)
     if not player then return end
     local data = LastPurpose.getData(player)
+    if data.storyFlowVersion == 2 then return end
     if data.stage ~= 4 then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
     if not heist then return end
@@ -101,7 +110,7 @@ function LastPurpose.updateHeistArrival(player)
     data.heistReachedAtHours = player:getHoursSurvived()
     LastPurpose.showThought(player, {
         "Este es el lugar...",
-        "Ahora tengo que encontrar el botin."
+        "Ahora tengo que encontrar el botín."
     })
 end
 

@@ -2,6 +2,36 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [0.7.0] - 2026-09-04
+
+- Extended the Knox Bank story with a secondary meeting point and a recoverable coded note.
+- Added bank reconnaissance before the player can begin the robbery.
+- Added a marked getaway zone that requires a stopped, functional vehicle with fuel.
+- Restricted entry into the bank to the night window between 20:00 and 05:00.
+- Restored the intended 15-day prologue activation.
+- Changed both versions of the unique loot bag to a consistent black burglar-bag appearance.
+- Added save migration so existing 0.6.x stories keep their original stage progression.
+- Replaced the exact radio frequency in the tracker with ten possible signals.
+- Changed the mysterious caller to repeat the transmission every 30 in-game minutes and end by asking whether the listener copied the message.
+- Corrected Spanish grammar and accents throughout the player-facing story text.
+- Strengthened the blue visual hierarchy used by mission headings and character thoughts.
+- Hardened tracker dragging when the cursor leaves the panel.
+- Reduced permanent per-frame work by moving map progression checks to minute events and sleeping the ambush updater outside active assaults.
+- Removed development-only starter-kit files from the distributable mod.
+
+## [0.6.1] - development
+
+- Made the return to the planning table the definitive end of the first heist.
+- Added a persistent, one-time reward of two Nimble levels, capped at level 10.
+- Added mid/late-game supplies to the Knox Bank loot on completion: medicine, bandages, batteries, repair materials, fuel can, military radio, preserved food, and three random ammunition boxes.
+- Required the unique loot bag to still be carried when completing the return objective.
+- Kept the annotated-map continuation out of this mission; version 0.6.1 ends the heist at the safehouse.
+- Recorded the future design as one random heist per playthrough, followed by access to other profession stories.
+- Added a world-context action on the planning table so the reward is granted only when the player explicitly reviews the loot.
+- Replaced the accessible bank container during the escape with a sealed, fixed-weight loot object.
+- Opening the loot at the planning table now replaces the seal with a usable 28-capacity bag, below Build 42's 35-capacity best vanilla backpack.
+- Delayed creation of valuables and survival supplies until the sealed loot is reviewed at the safehouse.
+
 ## [0.6.0] - 2026-09-04
 
 - Added a planning table under the new persistent ID `LastPurpose.SafehousePlanningTableV2`.
