@@ -10,12 +10,12 @@ The current prototype focuses on the Burglar story, **“The Last Heist”** (`E
 
 **0.5.2 (testing)** — Singleplayer, Project Zomboid Build 42 stable.
 
-Latest stable release: **0.4.1**.
+Latest validated release: **0.5.2**.
 
 Implemented:
 
 - Burglar detection through Build 42 profession and trait APIs.
-- Prologue activation after 15 survived days.
+- Prologue activation after 20 in-game minutes in the current debugging build.
 - First mission: **“Prepare the Heist”**.
 - Automatic tracking of a crowbar, screwdriver, flashlight, wearable bag/backpack, and a working vehicle with fuel.
 - Persistent progression through `player:getModData()`.
@@ -67,7 +67,7 @@ LastPurpose/
     └── LP_Common.lua
 ```
 
-See `DOCUMENTACION_LastPurpose_0.3.1.txt` for the complete Spanish technical and design documentation.
+See `DOCUMENTACION_LastPurpose_0.5.2.txt` for the complete Spanish technical and design documentation.
 
 ## Development status
 
