@@ -1,6 +1,7 @@
 require "LastPurpose/LP_Config"
 require "LastPurpose/LP_Heists"
 require "LastPurpose/LP_State"
+require "LastPurpose/LP_SafehouseAnchor"
 require "LastPurpose/LP_BurglarStory"
 require "LastPurpose/LP_Thought"
 require "LastPurpose/LP_RadioStory"
@@ -17,5 +18,6 @@ if not LastPurpose.eventsRegistered then
  Events.OnTick.Add(LastPurpose.updateHeistMapAndArrival)
  Events.OnTick.Add(LastPurpose.updateHeistEscape)
  Events.EveryOneMinute.Add(LastPurpose.updateHeistLoot)
+ Events.EveryOneMinute.Add(LastPurpose.updateSafehouseAnchor)
  LastPurpose.eventsRegistered=true
 end

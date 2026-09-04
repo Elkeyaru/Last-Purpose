@@ -1,0 +1,51 @@
+version = 1
+tileset
+{
+    file = lastpurpose_planning_01
+    size = 8,1
+    id = 503
+
+    // lastpurpose_planning_01_0 (from lastpurpose_planning_01_0.png)
+    tile
+    {
+        xy = 0,0
+        CanScrap =
+        CustomItem = LastPurpose.SafehousePlanningTableV2
+        CustomName = Planning Table
+        Eoffset = 1
+        Facing = S
+        GenericCraftingSurface =
+        IsLow =
+        IsMoveAble =
+        IsTable =
+        Material = Wood
+        Material2 = Nails
+        PickUpWeight = 40
+        ScrapSize = Small
+        Surface = 15
+        container = sidetable
+        solidtrans =
+    }
+
+    // lastpurpose_planning_01_1 (from lastpurpose_planning_01_1.png)
+    tile
+    {
+        xy = 1,0
+        CanScrap =
+        CustomItem = LastPurpose.SafehousePlanningTableV2
+        CustomName = Planning Table
+        Facing = E
+        GenericCraftingSurface =
+        IsLow =
+        IsMoveAble =
+        IsTable =
+        Material = Wood
+        Material2 = Nails
+        PickUpWeight = 40
+        ScrapSize = Small
+        Soffset = -1
+        Surface = 15
+        container = sidetable
+        solidtrans =
+    }
+}

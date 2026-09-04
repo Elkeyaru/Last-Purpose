@@ -1,0 +1,259 @@
+LAST PURPOSE 0.6.0 - DOCUMENTACIÓN TÉCNICA, FUNCIONAL Y DE DISEÑO
+================================================================
+
+Actualizado: 4 de septiembre de 2026
+Versión funcional validada: 0.6.0
+Juego objetivo: Project Zomboid Build 42 estable
+Modo soportado: Singleplayer
+Autor: ElKeyaru
+ID inmutable del mod: LastPurposeB42
+Repositorio: https://github.com/Elkeyaru/Last-Purpose
+
+
+1. PROPÓSITO
+------------
+
+Last Purpose añade objetivos narrativos de mid-game y late-game basados en la
+profesión inicial del personaje. Las historias usan radio, pistas, mapas, lugares,
+objetos y amenazas del mundo para dar propósito sin sustituir la exploración.
+
+La versión 0.6.0 desarrolla la primera historia del Ladrón, "El último golpe", y
+termina después de regresar con vida al refugio elegido por el jugador.
+
+
+2. COMPATIBILIDAD Y SEGURIDAD
+-----------------------------
+
+- Project Zomboid Build 42 estable como versión principal.
+- Singleplayer probado; Multiplayer todavía no está soportado.
+- Progreso guardado en player:getModData().LastPurpose.
+- Esquema de guardado actual: 5.
+- Migraciones aditivas: no reinician el progreso de versiones anteriores.
+- No modifica ni elimina partidas guardadas.
+- ID LastPurposeB42 conservado para mantener la identidad del mod.
+- Frecuencia narrativa elegida entre canales libres para evitar emisoras vanilla
+  o registradas por otros mods.
+
+
+3. RECORRIDO FUNCIONAL VALIDADO
+-------------------------------
+
+Etapa 0 - Espera del prólogo
+  En la compilación actual de depuración se activa después de 20 minutos dentro
+  del juego. El diseño final previsto sigue siendo 15 días o una opción Sandbox.
+
+Etapa 1 - Preparar el golpe
+  Rastrea de forma acumulativa:
+  - Palanca.
+  - Destornillador.
+  - Linterna.
+  - Bolsa o mochila equipable.
+  - Vehículo funcional con combustible.
+  - Mesa de planificación colocada como refugio.
+
+Etapa 2 - Preparación terminada
+  El personaje piensa que debe revisar la radio.
+
+Etapa 3 - Interceptar la transmisión
+  La pista se emite a las 02:00, 08:00, 14:00 y 20:00 en una frecuencia libre.
+
+Etapa 4 - Adelantarse a la competencia
+  Al escuchar la última línea, el personaje reacciona después de cinco segundos.
+  Se revela el sector y aparece una X azul sobre Knox Bank en Louisville.
+
+Etapa 5 - Llegar y tomar el botín
+  La escena aparece en 12562, 1690, nivel 1, con dos cadáveres y una bolsa única.
+
+Etapa 6 - Escapar
+  La bolsa contiene cinco lingotes pequeños de oro, cuatro diamantes y seis fajos
+  de dinero. Al recogerla se activa una alarma de 35 segundos y cinco oleadas de
+  40 zombis entre 30 y 50 casillas del banco.
+
+Etapa 7 - Volver al refugio
+  Tras alejarse 520 casillas del banco con la bolsa, el objetivo apunta a la mesa
+  colocada por el jugador. Regresar a un radio de ocho casillas completa el viaje.
+
+Etapa 8 - Revisar el botín
+  Estado actual al final de la versión 0.6.0. Aquí continuará el siguiente golpe.
+
+Todo el recorrido anterior fue probado en el juego y confirmado funcional.
+
+
+4. MESA DE PLANIFICACIÓN
+------------------------
+
+Tipo persistente: LastPurpose.SafehousePlanningTableV2
+Sprite principal: lastpurpose_planning_01_0
+Sprite rotado: lastpurpose_planning_01_1
+Tiledef estable: lastpurpose_planning_01, ID 503
+
+Receta:
+  - Una tabla de madera.
+  - Un libro.
+  - Dos periódicos compatibles.
+  - Un pegamento o cinta compatible.
+
+Se fabrica directamente desde el inventario. No requiere banco de trabajo ni que
+el personaje esté bajo techo. Se coloca mediante el sistema normal de muebles de
+Build 42. Al detectarla a cinco casillas, LP_SafehouseAnchor registra sus
+coordenadas automáticamente como refugio.
+
+Las caras sur/este permiten rotación nativa; norte/oeste reutilizan las vistas del
+eje opuesto. El paquete usa lienzos estándar de 128x256 para evitar sprites
+invisibles al rotar.
+
+
+5. ESTRUCTURA DE EJECUCIÓN
+-------------------------
+
+LastPurpose/
+  mod.info
+  common/
+    media/scripts/LastPurpose_PlanningTable.txt
+    media/lua/shared/LastPurpose/
+      LP_Common.lua
+      LP_Heists.lua
+    media/lua/shared/Translate/EN/
+    media/lua/shared/Translate/ES/
+  42/
+    mod.info
+    media/lastpurpose_planning_01.tiles
+    media/texturepacks/lastpurpose_planning_01.pack
+    media/textures/Item_LastPurpose_PlanningTable.png
+    media/lua/client/LastPurpose/
+      LP_Main.lua
+      LP_Config.lua
+      LP_State.lua
+      LP_BurglarStory.lua
+      LP_RadioStory.lua
+      LP_Thought.lua
+      LP_HeistStory.lua
+      LP_HeistLoot.lua
+      LP_HeistEscape.lua
+      LP_SafehouseAnchor.lua
+      LP_Tracker.lua
+    media/lua/server/LastPurpose/
+      LP_RadioChannel.lua
+
+La carpeta art/ contiene fuentes y herramientas de desarrollo. No es necesaria
+para ejecutar el mod y no debe incluirse en el ZIP público.
+
+
+6. RESPONSABILIDAD DE CADA ARCHIVO
+----------------------------------
+
+LP_Config.lua
+  Versión 0.6.0, activación temporal, tecla J y catálogos de objetivos/objetos.
+
+LP_State.lua
+  Detecta al Ladrón, obtiene el jugador y crea o migra el esquema persistente 5.
+
+LP_BurglarStory.lua
+  Activa el prólogo, recorre inventarios anidados y acumula los requisitos.
+
+LP_RadioChannel.lua
+  Busca una frecuencia libre, registra el canal y programa cuatro emisiones.
+
+LP_RadioStory.lua
+  Detecta la última frase realmente recibida y programa la reacción narrativa.
+
+LP_Thought.lua
+  Dibuja pensamientos azules durante ocho segundos con negrita simulada.
+
+LP_Heists.lua
+  Catálogo extensible de golpes. Actualmente contiene louisville_knox_bank.
+
+LP_HeistStory.lua
+  Selecciona el golpe, revela el sector, dibuja la X y detecta la llegada.
+
+LP_HeistLoot.lua
+  Crea una vez la escena fija, firma la bolsa única y detecta su recogida incluso
+  dentro de otro contenedor.
+
+LP_HeistEscape.lua
+  Controla alarma, ruido, cinco oleadas, movimiento al banco y persistencia de la
+  emboscada versión 3.
+
+LP_SafehouseAnchor.lua
+  Detecta ambas orientaciones de la mesa, guarda coordenadas, comprueba que siga
+  existiendo, cambia a la etapa de regreso a 520 casillas y completa al volver.
+
+LP_Tracker.lua
+  Presenta la etapa, requisitos, frecuencia, dirección y distancia. Es movible,
+  guarda su posición y puede ocultarse con J.
+
+LP_Main.lua
+  Carga los módulos y registra todos los eventos una sola vez.
+
+LastPurpose_PlanningTable.txt
+  Declara el objeto Moveable y su receta Build 42.
+
+lastpurpose_planning_01.tiles / .pack
+  Definición de propiedades y texturas nativas de las dos orientaciones.
+
+
+7. DATOS PERSISTENTES PRINCIPALES
+---------------------------------
+
+Ruta: player:getModData().LastPurpose
+
+Campos importantes:
+  schema, active, completed, stage, objectives, trackerVisible, trackerX, trackerY,
+  selectedHeistId, radioFrequency, radioClueHeard, lootTaken, lootSceneVersion,
+  ambushVersion, ambushWavesSpawned, ambushZombiesSpawned, safehousePlaced,
+  safehouseX, safehouseY, safehouseZ, bankEscapeCompleted y safehouseReturned.
+
+No se deben renombrar o eliminar campos persistentes sin una migración explícita.
+
+
+8. RESULTADO DE CONSOLA DE LA PRUEBA FINAL
+------------------------------------------
+
+La consola confirmó en orden:
+  - Carga del texturepack lastpurpose_planning_01.
+  - Registro del canal narrativo.
+  - Detección del Ladrón y tracker v0.6.0.
+  - Registro de la mesa como refugio.
+  - Revelado del sector.
+  - Creación de la escena.
+  - Recogida del botín.
+  - Alarma de 35 segundos.
+  - Cinco oleadas de 40 zombis.
+  - Escape de 520 metros/casillas según el texto actual del mod.
+  - Regreso al refugio.
+
+No apareció ninguna excepción atribuida a Last Purpose durante el recorrido final.
+Los mensajes restantes sobre FluidContainer, Piano, Mannequin, metaID, vegetación
+y tiles faltantes pertenecen al juego base o a otros mods instalados.
+
+
+9. EMPAQUETADO PÚBLICO
+----------------------
+
+El ZIP público debe contener solamente:
+  LastPurpose/mod.info
+  LastPurpose/common/...
+  LastPurpose/42/...
+
+No incluir .git, .backups, .releases, art, documentación interna, capturas, logs ni
+partidas. La carpeta resultante puede copiarse directamente a Zomboid/mods.
+
+
+10. SIGUIENTE DESARROLLO
+------------------------
+
+La etapa 8 debe permitir revisar el botín en la mesa y descubrir un mapa anotado
+que conecte el banco con un catálogo de nuevos golpes: exposición de pinturas,
+vehículo deportivo, penthouse u otros objetivos. Antes de ampliar profesiones se
+recomienda completar ese bucle modular para Ladrón.
+
+También sigue pendiente reemplazar la activación rápida de 20 minutos por 15 días
+o por una opción Sandbox configurable antes de orientar el mod a partidas normales.
+
+
+11. POLÍTICA DEL PROYECTO
+-------------------------
+
+Repositorio privado y código propietario en este punto. Copyright 2026 ElKeyaru.
+Project Zomboid pertenece a sus respectivos propietarios. Last Purpose es un mod
+no oficial y no está afiliado ni respaldado por The Indie Stone.

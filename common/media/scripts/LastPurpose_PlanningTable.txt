@@ -1,0 +1,35 @@
+module LastPurpose
+{
+    imports
+    {
+        Base
+    }
+
+    item SafehousePlanningTableV2
+    {
+        DisplayCategory = Furniture,
+        ItemType = base:moveable,
+        Icon = LastPurpose_PlanningTable,
+        Weight = 4.0,
+        WorldObjectSprite = lastpurpose_planning_01_0,
+    }
+
+    craftRecipe MakeSafehousePlanningTableV2
+    {
+        timedAction = Making,
+        time = 120,
+        Tags = InHandCraft,
+        category = Carpentry,
+        inputs
+        {
+            item 1 [Base.Plank],
+            item 1 [Base.Book],
+            item 2 [Base.Newspaper;Base.Newspaper_Recent;Base.Newspaper_New;Base.Newspaper_Dispatch_New;Base.Newspaper_Herald_New;Base.Newspaper_Knews_New;Base.Newspaper_Times_New],
+            item 1 tags[base:glue;base:tape],
+        }
+        outputs
+        {
+            item 1 LastPurpose.SafehousePlanningTableV2,
+        }
+    }
+}

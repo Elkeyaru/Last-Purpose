@@ -103,6 +103,19 @@ function LPGoalTracker:prerender()
   if d.lootSpawned then
    self:drawText("Busca junto a los dos cadaveres.",12,124,0.65,0.68,0.72,1,UIFont.Small)
   end
+ elseif d.stage==7 then
+  self:drawText("VUELVE AL REFUGIO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  if d.safehousePlaced and d.safehouseX then
+   local dx=d.safehouseX-p:getX(); local dy=d.safehouseY-p:getY(); local distance=math.sqrt((dx*dx)+(dy*dy))
+   self:drawText("La mesa marca tu base segura.",12,76,0.90,0.74,0.38,1,UIFont.Small)
+   self:drawText(string.format("Distancia al refugio: %.0f m",distance),12,100,0.72,0.78,0.82,1,UIFont.Small)
+  else
+   self:drawText("Debes colocar otra mesa.",12,76,0.92,0.32,0.28,1,UIFont.Small)
+  end
+ elseif d.stage>=8 then
+  self:drawText("REVISA EL BOTIN",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText("Has vuelto al refugio con vida.",12,76,0.45,0.86,0.55,1,UIFont.Small)
+  self:drawText("Revisa el botin junto a la mesa.",12,100,0.72,0.78,0.82,1,UIFont.Small)
  elseif d.stage>=6 then
  self:drawText("ESCAPA CON EL BOTIN",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText("Botin del Knox Bank asegurado.",12,76,0.90,0.74,0.38,1,UIFont.Small)
@@ -139,8 +152,8 @@ function LastPurpose.ensureTracker(i,p)
   local savedX=tonumber(d.trackerX) or defaultX
   local savedY=tonumber(d.trackerY) or 90
   local x=math.max(0,math.min(getCore():getScreenWidth()-345,savedX))
-  local y=math.max(0,math.min(getCore():getScreenHeight()-205,savedY))
-  LastPurpose.tracker=LPGoalTracker:new(x,y,345,205)
+  local y=math.max(0,math.min(getCore():getScreenHeight()-225,savedY))
+  LastPurpose.tracker=LPGoalTracker:new(x,y,345,225)
   LastPurpose.tracker:initialise(); LastPurpose.tracker:addToUIManager()
  end
  LastPurpose.tracker:setVisible(LastPurpose.getData(p).trackerVisible~=false)

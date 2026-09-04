@@ -2,6 +2,26 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [0.6.0] - 2026-09-04
+
+- Added a planning table under the new persistent ID `LastPurpose.SafehousePlanningTableV2`.
+- Added a dedicated native Build 42 tile for the planning table, with its own placement preview and furniture properties.
+- Added an integrated open book and papers to the table sprite, scaled to match vanilla furniture.
+- Added English and Spanish names for the moveable so it no longer appears as a brown low table.
+- Added automatic visual migration for planning tables already placed in existing saves.
+- Removed the loose-texture overlay that could remain visible through rooms and cutaway walls.
+- Fixed the Build 42 tile-definition ID so the planning table can be placed normally.
+- Removed the special "place as safehouse" inventory action; a nearby placed planning table is now detected automatically.
+- Allowed the planning table to establish a safehouse outdoors and changed its recipe to inventory crafting.
+- Corrected the planning-table sprite baseline so it rests naturally on its selected world tile.
+- Packed each planning-table face on a standard 128x256 Build 42 furniture canvas.
+- Rebuilt the table silhouette on the exact footprint, perspective, and 94x83 visible bounds of vanilla low furniture.
+- Added native south/east furniture faces so the planning table can be rotated in all four placement directions.
+- Added the safehouse as the sixth preparation requirement.
+- Added the return-to-safehouse objective after escaping 520 tiles from Knox Bank.
+- Kept the validated 0.5.2 release and existing save data untouched.
+- Validated the complete sequence in-game: preparation, radio clue, bank, loot, ambush, escape, and return to the planning table.
+
 ## [0.5.2] - testing
 
 - Added a 35-second house alarm when the unique loot bag is taken.

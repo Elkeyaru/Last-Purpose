@@ -59,7 +59,7 @@ local function spawnLootScene(data)
     return true
 end
 
-local function findLootBag(container, seen)
+function LastPurpose.findHeistLootBag(container, seen)
     if not container or not container.getItems then return nil end
     seen = seen or {}
     if seen[container] then return nil end
@@ -71,7 +71,7 @@ local function findLootBag(container, seen)
             local itemData = item:getModData()
             if itemData and itemData.LastPurposeLootId == LOOT_ID then return item end
             if item.getInventory then
-                local found = findLootBag(item:getInventory(), seen)
+                local found = LastPurpose.findHeistLootBag(item:getInventory(), seen)
                 if found then return found end
             end
         end
@@ -104,7 +104,7 @@ function LastPurpose.updateHeistLoot(player)
     end
     if data.lootTaken then return end
 
-    if findLootBag(player:getInventory()) then
+    if LastPurpose.findHeistLootBag(player:getInventory()) then
         data.lootTaken = true
         data.lootTakenAtHours = player:getHoursSurvived()
         data.stage = 6

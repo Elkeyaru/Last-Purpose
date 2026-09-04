@@ -8,9 +8,9 @@ The current prototype focuses on the Burglar story, **“The Last Heist”** (`E
 
 ## Current version
 
-**0.5.2 (testing)** — Singleplayer, Project Zomboid Build 42 stable.
+**0.6.0 (validated)** — Singleplayer, Project Zomboid Build 42 stable.
 
-Latest validated release: **0.5.2**.
+Latest validated release: **0.6.0**.
 
 Implemented:
 
@@ -28,6 +28,9 @@ Implemented:
 - Unique Knox Bank loot bag with gold, diamonds, and bundled money.
 - Automatic detection when the player takes the heist loot.
 - A 35-second bank alarm and a staged 200-zombie escape encounter.
+- Craftable, rotatable wooden planning table with native Build 42 sprites and an open book.
+- Automatic safehouse registration when the planning table is placed, indoors or outdoors.
+- Dynamic return objective after escaping 520 tiles from the bank with the loot.
 - Modular Lua architecture.
 - Persistent random radio frequency and six-hour narrative broadcasts.
 - Second story stage: intercept the conversation about the Louisville bank.
@@ -57,17 +60,17 @@ LastPurpose/
 ├── mod.info
 ├── 42/
 │   ├── mod.info
-│   └── media/lua/client/LastPurpose/
-│       ├── LP_Main.lua
-│       ├── LP_Config.lua
-│       ├── LP_State.lua
-│       ├── LP_BurglarStory.lua
-│       └── LP_Tracker.lua
-└── common/media/lua/shared/LastPurpose/
-    └── LP_Common.lua
+│   └── media/
+│       ├── lastpurpose_planning_01.tiles
+│       ├── texturepacks/lastpurpose_planning_01.pack
+│       ├── textures/Item_LastPurpose_PlanningTable.png
+│       └── lua/client/LastPurpose/
+└── common/media/
+    ├── scripts/LastPurpose_PlanningTable.txt
+    └── lua/shared/
 ```
 
-See `DOCUMENTACION_LastPurpose_0.5.2.txt` for the complete Spanish technical and design documentation.
+See `DOCUMENTACION_LastPurpose_0.6.0.txt` for the complete Spanish technical and design documentation.
 
 ## Development status
 
