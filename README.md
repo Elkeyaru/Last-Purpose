@@ -75,7 +75,7 @@ LastPurpose/
     └── lua/shared/
 ```
 
-See `DOCUMENTACION_LastPurpose_ACTUAL.txt` for the single current Spanish technical and design reference. Historical changes remain in `CHANGELOG.md`.
+See `documentacion_mod.txt` for the single Spanish technical and design reference. Historical changes remain in `CHANGELOG.md`.
 
 ## Development status
 
