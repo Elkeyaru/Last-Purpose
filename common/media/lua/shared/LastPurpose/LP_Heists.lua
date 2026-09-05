@@ -9,18 +9,12 @@ LastPurpose.HEISTS = {
         x = 12564,
         y = 1698,
         arrivalRadius = 35,
-        clue = {
-            x = 12180,
-            y = 1888,
-            z = 0,
-            arrivalRadius = 28,
-            title = "PUNTO DE REUNION",
-            destination = "Un callejon al oeste de Louisville"
-        },
-        getaway = {
-            x = 12582,
-            y = 1722,
-            radius = 28
+        clueSites = {
+            {12595,998},{12916,1204},{13206,1244},{12688,1497},{13230,1691},
+            {12148,1728},{12556,1914},{13550,2085},{12762,2206},{13567,2344},
+            {12266,2610},{12606,2819},{13696,2967},{13638,3069},{13756,3282},
+            {12941,3328},{12318,3591},{12338,3679},{12748,3924},{13587,4074},
+            {13620,4130}
         },
         marker = "X",
         dialogue = {
@@ -44,4 +38,13 @@ end
 function LastPurpose.chooseHeistId()
     if #LastPurpose.HEIST_ORDER == 0 then return nil end
     return LastPurpose.HEIST_ORDER[ZombRand(#LastPurpose.HEIST_ORDER) + 1]
+end
+
+function LastPurpose.getHeistClue(data, heist)
+    if not data or not heist or not heist.clueSites or #heist.clueSites == 0 then return nil end
+    if not data.clueSiteIndex or not heist.clueSites[data.clueSiteIndex] then
+        data.clueSiteIndex = ZombRand(#heist.clueSites) + 1
+    end
+    local site = heist.clueSites[data.clueSiteIndex]
+    return { x=site[1], y=site[2], z=0, arrivalRadius=28, title="PUNTO DE REUNION", destination="Un punto de reunion en Louisville" }
 end

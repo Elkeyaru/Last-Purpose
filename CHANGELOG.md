@@ -2,6 +2,19 @@
 
 All notable changes to Last Purpose are recorded here.
 
+## [Unreleased]
+
+- Added 21 persistent possible meeting-point locations across Louisville.
+- Required the coded note to be read with Project Zomboid's vanilla reading action before revealing Knox Bank.
+- Removed the mandatory getaway-vehicle parking stage after reconnaissance.
+- Prepared the loot scene from 20:00 whenever its world cell is loaded.
+- Added a locked and damage-resistant security perimeter covering x 12560–12583, y 1687–1737, floors 0–3 before the robbery window.
+- Added support for regular and thumpable Build 42 doors and windows, including immediate protected-window restoration near the bank.
+- Released the bank protection between 20:00 and 05:00 after reconnaissance.
+- Added an early alarm when more than two windows are broken during the robbery window.
+- Added a fresh second 35-second, 200-zombie ambush on leaving the bank if the player already completed an early alarm before taking the loot.
+- Added diagnostic logging for the number of protected entrances.
+
 ## [0.7.0] - 2026-09-04
 
 - Extended the Knox Bank story with a secondary meeting point and a recoverable coded note.

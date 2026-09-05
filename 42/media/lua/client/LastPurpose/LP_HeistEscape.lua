@@ -9,6 +9,8 @@ local WAVE_INTERVAL_MS = 750
 local SPAWN_MIN_RADIUS = 30
 local SPAWN_MAX_RADIUS = 50
 local AMBUSH_VERSION = 3
+local BANK_MIN_X, BANK_MAX_X = 12560, 12583
+local BANK_MIN_Y, BANK_MAX_Y = 1687, 1737
 
 LastPurpose.heistAlarmRuntime = LastPurpose.heistAlarmRuntime or {}
 LastPurpose.heistEscapeActive = LastPurpose.heistEscapeActive or false
@@ -78,13 +80,42 @@ local function stopAlarm(player, data)
     print(string.format("[LastPurpose] Emboscada completada: %d zombis solicitados", WAVE_COUNT * ZOMBIES_PER_WAVE))
 end
 
+function LastPurpose.prepareExitAmbush(player, data, waitForExit)
+    local runtime = LastPurpose.heistAlarmRuntime
+    if runtime.soundId then
+        pcall(function() player:getEmitter():stopSound(runtime.soundId) end)
+    end
+    runtime.startedAt = nil
+    runtime.nextWaveAt = nil
+    runtime.nextNoiseAt = nil
+    runtime.soundId = nil
+    data.ambushTriggered = false
+    data.ambushCompleted = false
+    data.ambushForced = false
+    data.ambushWavesSpawned = 0
+    data.ambushZombiesSpawned = 0
+    data.ambushVersion = AMBUSH_VERSION
+    data.exitAmbushPrepared = true
+    data.exitAmbushPending = waitForExit == true
+    LastPurpose.heistEscapeActive = waitForExit ~= true
+    print(waitForExit and "[LastPurpose] Segunda emboscada preparada para la salida del banco" or "[LastPurpose] Emboscada preparada al recoger el botin")
+end
+
 function LastPurpose.updateHeistEscape()
-    if not LastPurpose.heistEscapeActive then return end
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
+    if data.exitAmbushPending and data.lootTaken then
+        local x,y=player:getX(),player:getY()
+        if x<BANK_MIN_X or x>BANK_MAX_X or y<BANK_MIN_Y or y>BANK_MAX_Y then
+            data.exitAmbushPending=false
+            LastPurpose.heistEscapeActive=true
+            print("[LastPurpose] El jugador salio del banco; comienza la segunda emboscada")
+        end
+    end
+    if not LastPurpose.heistEscapeActive then return end
     local lootStage = data.storyFlowVersion == 2 and 10 or 6
-    if not data.lootTaken or data.stage < lootStage then
+    if (not data.lootTaken and not data.ambushForced) or (data.stage < lootStage and not data.ambushForced) then
         LastPurpose.heistEscapeActive = false
         return
     end
@@ -129,7 +160,7 @@ function LastPurpose.refreshHeistEscape()
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
     local lootStage = data.storyFlowVersion == 2 and 10 or 6
-    LastPurpose.heistEscapeActive = data.lootTaken == true
-        and data.stage >= lootStage
+    LastPurpose.heistEscapeActive = (data.exitAmbushPending ~= true)
+        and (data.lootTaken == true and data.stage >= lootStage or data.ambushForced == true)
         and data.ambushCompleted ~= true
 end

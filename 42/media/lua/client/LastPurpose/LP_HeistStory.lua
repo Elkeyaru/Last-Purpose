@@ -12,11 +12,9 @@ local function getMapTarget(data, heist)
         end
         return nil
     end
-    if expanded and (data.stage == 4 or data.stage == 5) and heist.clue then
-        return heist.clue.x, heist.clue.y, "PISTA", false, "clue"
-    end
-    if expanded and data.stage == 7 and heist.getaway then
-        return heist.getaway.x, heist.getaway.y, "VEHICULO DE FUGA", false, "getaway"
+    local clue = LastPurpose.getHeistClue(data, heist)
+    if expanded and (data.stage == 4 or data.stage == 5) and clue then
+        return clue.x, clue.y, "PISTA", false, "clue"
     end
     return heist.x, heist.y, "OBJETIVO", false, "heist"
 end

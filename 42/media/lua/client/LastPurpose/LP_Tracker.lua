@@ -93,7 +93,7 @@ function LPGoalTracker:prerender()
    self:drawText("Buscando señales disponibles...",12,100,0.90,0.74,0.38,1,UIFont.Small)
   end
  elseif d.storyFlowVersion==2 and d.stage==4 then
-  local heist=LastPurpose.ensureSelectedHeist(p); local clue=heist and heist.clue
+  local heist=LastPurpose.ensureSelectedHeist(p); local clue=heist and LastPurpose.getHeistClue(d,heist)
   self:drawText("INVESTIGA LA PISTA",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText(clue and clue.destination or "Punto de reunión desconocido",12,76,0.90,0.74,0.38,1,UIFont.Small)
   if clue then
@@ -101,18 +101,15 @@ function LPGoalTracker:prerender()
    self:drawText(string.format("Distancia a la pista: %.0f m",distance),12,100,0.72,0.78,0.82,1,UIFont.Small)
   end
  elseif d.storyFlowVersion==2 and d.stage==5 then
-  self:drawText("REGISTRA EL PUNTO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
-  self:drawText("Encuentra la nota que dejaron atrás.",12,76,0.90,0.74,0.38,1,UIFont.Small)
-  self:drawText("La información revelará el objetivo.",12,100,0.72,0.78,0.82,1,UIFont.Small)
+  local hasNote=LastPurpose.findClueNote and LastPurpose.findClueNote(p)~=nil
+  self:drawText(hasNote and "LEE LA NOTA" or "REGISTRA EL PUNTO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
+  self:drawText(hasNote and "Lee la nota cifrada que encontraste." or "Encuentra la nota que dejaron atras.",12,76,0.90,0.74,0.38,1,UIFont.Small)
+  self:drawText(hasNote and "Usa la accion de lectura del juego." or "La nota revelara el objetivo.",12,100,0.72,0.78,0.82,1,UIFont.Small)
  elseif d.storyFlowVersion==2 and d.stage==6 then
   local heist=LastPurpose.ensureSelectedHeist(p)
   self:drawText("RECONOCE EL OBJETIVO",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText(heist and heist.destination or "Knox Bank",12,76,0.90,0.74,0.38,1,UIFont.Small)
   self:drawText("Acércate al banco sin entrar.",12,100,0.72,0.78,0.82,1,UIFont.Small)
- elseif d.storyFlowVersion==2 and d.stage==7 then
-  self:drawText("PREPARA LA HUIDA",12,44,0.92,0.92,0.92,1,UIFont.Medium)
-  self:drawText("Lleva un vehículo funcional a la zona.",12,76,0.90,0.74,0.38,1,UIFont.Small)
-  self:drawText("Deténlo dentro del punto marcado.",12,100,0.72,0.78,0.82,1,UIFont.Small)
  elseif d.storyFlowVersion==2 and d.stage==8 then
   self:drawText("ESPERA LA OSCURIDAD",12,44,0.92,0.92,0.92,1,UIFont.Medium)
   self:drawText("El vehículo de fuga está preparado.",12,76,0.45,0.86,0.55,1,UIFont.Small)

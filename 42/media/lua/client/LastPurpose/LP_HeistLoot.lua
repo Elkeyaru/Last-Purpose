@@ -90,7 +90,7 @@ function LastPurpose.updateHeistLoot(player)
     player = player or LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    local readyStage = data.storyFlowVersion == 2 and 9 or 5
+    local readyStage = data.storyFlowVersion == 2 and 8 or 5
     local takenStage = data.storyFlowVersion == 2 and 10 or 6
     if data.stage < readyStage then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
@@ -106,16 +106,23 @@ function LastPurpose.updateHeistLoot(player)
     end
 
     if not data.lootSpawned then
-        local dx, dy = player:getX() - LOOT_X, player:getY() - LOOT_Y
-        if player:getZ() ~= LOOT_Z or (dx * dx) + (dy * dy) > (35 * 35) then return end
+        if data.storyFlowVersion == 2 and data.stage == 8 then
+            local hour = getGameTime():getHour()
+            if hour < 20 and hour >= 5 then return end
+        end
         spawnLootScene(data)
         return
     end
     if data.lootTaken then return end
 
     if LastPurpose.findHeistLootBag(player:getInventory()) then
+        local hadEarlyAmbush = data.ambushTriggered == true or data.ambushCompleted == true or data.ambushForced == true
         data.lootTaken = true
-        LastPurpose.heistEscapeActive = true
+        if LastPurpose.prepareExitAmbush then
+            LastPurpose.prepareExitAmbush(player, data, hadEarlyAmbush)
+        else
+            LastPurpose.heistEscapeActive = true
+        end
         data.lootTakenAtHours = player:getHoursSurvived()
         data.stage = takenStage
         if HaloTextHelper then

@@ -8,6 +8,8 @@ module LastPurpose
         Icon = Note1,
         StaticModel = Note1,
         WorldStaticModel = Note1,
+        NumberOfPages = 1,
         ReadType = photo,
+        Tags = base:fastread,
     }
 }

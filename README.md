@@ -37,7 +37,7 @@ Implemented:
 - Collision-aware random radio frequency and narrative broadcasts every 30 in-game minutes.
 - The tracker presents ten possible frequencies without revealing which one is correct.
 - Second story stage: intercept the conversation about the Louisville bank.
-- Extended pre-heist investigation: meeting point, coded note, bank reconnaissance, getaway vehicle, and a night-time entry window.
+- Extended pre-heist investigation: randomized meeting point, mandatory coded-note reading, bank reconnaissance, and a night-time entry window.
 - Fixed black visual identity for the sealed loot and its unlocked reward bag.
 
 ## Planned direction
@@ -75,11 +75,11 @@ LastPurpose/
     └── lua/shared/
 ```
 
-See `DOCUMENTACION_LastPurpose_0.7.0.txt` for the complete Spanish technical and design documentation.
+See `DOCUMENTACION_LastPurpose_ACTUAL.txt` for the single current Spanish technical and design reference. Historical changes remain in `CHANGELOG.md`.
 
 ## Development status
 
-This project is under active private development. APIs, data structures, mission design, and visuals may change before release.
+The published stable version is 0.7.0. The working tree also contains the next development iteration: 21 randomized clue sites, mandatory vanilla note reading, a full rectangular Knox Bank security perimeter, removal of the getaway parking step, and a conditional second 200-zombie exit ambush. These changes require a complete in-game validation before the next release.
 
 ## Rights
 

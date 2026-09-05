@@ -1,6 +1,6 @@
 LastPurpose = LastPurpose or {}
 LastPurpose.VERSION = "0.7.0"
-LastPurpose.DEBUG_FAST_ACTIVATION = false
+LastPurpose.DEBUG_FAST_ACTIVATION = true
 LastPurpose.ACTIVATION_MINUTES = 20
 LastPurpose.ACTIVATION_DAYS = LastPurpose.DEBUG_FAST_ACTIVATION and (LastPurpose.ACTIVATION_MINUTES / (24 * 60)) or 15
 LastPurpose.SAVE_KEY = "LastPurpose"
