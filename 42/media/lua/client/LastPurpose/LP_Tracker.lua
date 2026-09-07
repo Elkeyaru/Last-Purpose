@@ -441,6 +441,16 @@ function LPGoalTracker:prerender()
     end
 
     local data = LastPurpose.getData(player)
+
+    -- Golpe terminado: el diario se cierra solo y no se vuelve a abrir. Se
+    -- comprueba en cada frame para atrapar el instante en que la etapa pasa
+    -- a "completed" con el libro abierto.
+    if LastPurpose.stageIs(data, "completed") then
+        data.trackerVisible = false
+        self:setVisible(false)
+        return
+    end
+
     if LastPurpose.stageIs(data, "inactive") or LastPurpose.stageIs(data, "prep_started") or LastPurpose.stageIs(data, "prep_completed") then
         -- Todavia no hay capitulos que mostrar: una sola pagina con el
         -- progreso de preparacion, a todo el ancho.
@@ -475,6 +485,15 @@ function LastPurpose.ensureTracker(playerIndex, player)
     if not LastPurpose.isBurglar(player) then return end
 
     LastPurpose.updateProgress(player)
+
+    -- Golpe terminado: si el diario ya existe se oculta, y no se crea uno
+    -- nuevo. El jugador ya no puede abrirlo.
+    if LastPurpose.stageIs(LastPurpose.getData(player), "completed") then
+        if LastPurpose.tracker then LastPurpose.tracker:setVisible(false) end
+        LastPurpose.getData(player).trackerVisible = false
+        return
+    end
+
     if not LastPurpose.tracker then
         local data = LastPurpose.getData(player)
         local defaultX = getCore():getScreenWidth() - PANEL_WIDTH - 25
@@ -492,15 +511,24 @@ function LastPurpose.ensureTracker(playerIndex, player)
 end
 
 function LastPurpose.onKeyPressed(key)
-    -- Keyboard.KEY_J se lee aqui, dentro de la funcion, y no como constante
-    -- de archivo: este es un archivo de cliente asi que la API de Keyboard
-    -- esta garantizada, pero mantenemos el habito por consistencia.
-    if key ~= Keyboard.KEY_J then return end
+    -- La tecla se resuelve aqui, dentro de la funcion: la configura el panel
+    -- de opciones (LP_Options.getTrackerKey) y por defecto es J. Si el panel
+    -- aun no cargo, getTrackerKey no existe todavia y se cae a J.
+    local wantKey = LastPurpose.getTrackerKey and LastPurpose.getTrackerKey() or Keyboard.KEY_J
+    if key ~= wantKey then return end
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
 
-    LastPurpose.ensureTracker(0, player)
     local data = LastPurpose.getData(player)
+    -- Con el golpe terminado el diario deja de ser accesible.
+    if LastPurpose.stageIs(data, "completed") then
+        data.trackerVisible = false
+        if LastPurpose.tracker then LastPurpose.tracker:setVisible(false) end
+        return
+    end
+
+    LastPurpose.ensureTracker(0, player)
+    if not LastPurpose.tracker then return end
     data.trackerVisible = not LastPurpose.tracker:getIsVisible()
     LastPurpose.tracker:setVisible(data.trackerVisible)
 end

@@ -1,4 +1,8 @@
 require "ISUI/ISWorldObjectContextMenu"
+require "TimedActions/ISSmashWindow"
+require "TimedActions/ISOpenCloseDoor"
+require "TimedActions/ISClimbThroughWindow"
+require "TimedActions/ISDestroyStuffAction"
 
 LastPurpose = LastPurpose or {}
 
@@ -184,7 +188,64 @@ if not LastPurpose.bankSmashHookInstalled then
     end
 end
 
+-- ---------------------------------------------------------------------------
+-- Bloqueo real de las acciones que vulneran una entrada.
+--
+-- setHealth()/setIsLocked() NO frena todas las vias en Build 42: romper un
+-- cristal a mano llama directo a IsoPlayer:smashWindow() sin mirar la salud
+-- del objeto; un Ladron puede forzar cerraduras; el mazo pasa por
+-- ISDestroyStuffAction. En vez de tapar cada via por separado, se envuelve el
+-- isValid() de cada accion cronometrada relevante: si el objetivo es una
+-- entrada protegida del banco, la accion se rechaza ANTES de arrancar, venga
+-- del menu contextual, de una tecla o del prompt en pantalla. Es una sola
+-- envoltura idempotente por clase (flag LastPurposeSealGuard).
+-- ---------------------------------------------------------------------------
+local GUARDED_ACTIONS = {
+    { class = "ISSmashWindow",        field = "window" },
+    { class = "ISOpenCloseDoor",      field = "item" },
+    { class = "ISClimbThroughWindow", field = "item" },
+    { class = "ISDestroyStuffAction", field = "item" },
+}
+
+local function warnBankSealed(player)
+    if not player then return end
+    if not LastPurpose.bankWeaponWarningAt or getTimestampMs() - LastPurpose.bankWeaponWarningAt > 2500 then
+        LastPurpose.bankWeaponWarningAt = getTimestampMs()
+        LastPurpose.showThought(player, { "El banco sigue cerrado.", "Tengo que esperar a la hora del golpe." })
+    end
+end
+
+function LastPurpose.installBankActionGuards()
+    for _, spec in ipairs(GUARDED_ACTIONS) do
+        local class = _G[spec.class]
+        if class and not class.LastPurposeSealGuard then
+            local originalIsValid = class.isValid
+            class.isValid = function(self)
+                local target = self[spec.field]
+                local actor = self.character or LastPurpose.getPlayerSafe(0)
+                local ok, blocked = pcall(LastPurpose.isProtectedBankEntrance, actor, target)
+                if ok and blocked then
+                    warnBankSealed(actor)
+                    return false
+                end
+                if originalIsValid then return originalIsValid(self) end
+                return true
+            end
+            class.LastPurposeSealGuard = true
+            LastPurpose.debugPrint("Guardia de accion instalada sobre " .. spec.class)
+        end
+    end
+end
+
+LastPurpose.installBankActionGuards()
+
 function LastPurpose.updateBankSecurity()
+    -- Por si el motor cargo alguna de las clases de accion despues que este
+    -- archivo; es idempotente y barato (solo instala lo que falte). Va antes
+    -- del corte por distancia para que las guardias queden puestas aunque el
+    -- jugador todavia no se haya acercado nunca al banco.
+    LastPurpose.installBankActionGuards()
+
     local player = LastPurpose.getPlayerSafe(0)
     if not player then return end
     local dx, dy = player:getX() - ANCHOR().x, player:getY() - ANCHOR().y
@@ -195,6 +256,13 @@ function LastPurpose.updateBankSecurity()
 
     local data = LastPurpose.getData(player)
     local windowOpen = not shouldRemainProtected(player)
+
+    if data.bankSecurityLoggedStage ~= data.stage then
+        data.bankSecurityLoggedStage = data.stage
+        LastPurpose.debugPrint(string.format(
+            "Seguridad del banco: etapa=%s ladron=%s sellado=%s",
+            tostring(data.stage), tostring(LastPurpose.isBurglar(player)), tostring(not windowOpen)))
+    end
 
     -- Se reconstruye siempre, incluso de noche: la cache Lua se pierde al
     -- cargar una partida guardada.
@@ -217,7 +285,8 @@ function LastPurpose.updateBankSecurity()
     elseif not windowOpen and data.bankSecurityObjectCount ~= count then
         data.bankSecurityObjectCount = count
         data.bankSecurityMissingLogged = false
-        LastPurpose.debugPrint(string.format("Knox Bank protegido: %d puertas y ventanas", count))
+        LastPurpose.debugPrint(string.format(
+            "Knox Bank sellado: %d puertas y ventanas protegidas (etapa %s)", count, tostring(data.stage)))
     end
 
     if not windowOpen then

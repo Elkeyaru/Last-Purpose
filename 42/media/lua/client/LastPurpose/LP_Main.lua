@@ -1,4 +1,5 @@
 require "LastPurpose/LP_Heists"
+require "LastPurpose/LP_Options"
 require "LastPurpose/LP_State"
 require "LastPurpose/LP_Thought"
 require "LastPurpose/LP_BurglarStory"
@@ -17,6 +18,7 @@ if not LastPurpose.eventsRegistered then
     Events.EveryOneMinute.Add(function()
         local player = LastPurpose.getPlayerSafe(0)
         if not player then return end
+        if LastPurpose.refreshOptions then LastPurpose.refreshOptions() end
         LastPurpose.updateProgress(player)
         LastPurpose.updateRadioStory(player)
     end)

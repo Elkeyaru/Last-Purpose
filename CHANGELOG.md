@@ -7,6 +7,18 @@ referencia histórica.
 
 ## Sin publicar
 
+### Añadido
+- **Panel de opciones del mod** (Opciones → Mods → Last Purpose), con la API
+  nativa `PZAPI.ModOptions` de B42, sin dependencias. Dos ajustes: la tecla
+  para abrir/cerrar el diario (antes fija en `J`) y una casilla de registro
+  de depuración que enciende `LastPurpose.DEBUG` en caliente
+  (`LP_Options.lua`, nuevo).
+
+### Cambiado
+- **El diario deja de ser accesible al completar el golpe.** En la etapa
+  `completed` el rastreador se cierra solo y ni la tecla ni `ensureTracker`
+  lo vuelven a abrir (`LP_Tracker.lua`).
+
 ### Corregido
 - **El perímetro del Knox Bank se abría al dar las 20:00.** `shouldRemainProtected`
   liberaba puertas y ventanas en cuanto era de noche y el banco estaba
@@ -17,6 +29,16 @@ referencia histórica.
   solo de la etapa (`note_read` hasta `heist_active`, exclusivo): el banco
   sigue sellado aunque sea de noche hasta que el jugador llega y el golpe
   arranca de verdad (`LP_BankSecurity.lua`).
+- **La protección del banco no frenaba varias vías de entrada.** `setHealth()`
+  no impide romper un cristal a mano (`ISPlayer:smashWindow()` es una llamada
+  Java directa que ignora la salud del objeto), ni el mazo
+  (`ISDestroyStuffAction`), ni forzar una cerradura, ni pasar por la ventana
+  (`ISClimbThroughWindow`); solo se interceptaba el ítem del menú contextual.
+  Ahora se envuelve `isValid()` de `ISSmashWindow`, `ISOpenCloseDoor`,
+  `ISClimbThroughWindow` e `ISDestroyStuffAction`: si el objetivo es una
+  entrada sellada del banco, la acción se rechaza antes de arrancar, venga de
+  donde venga (`LP_BankSecurity.lua`). Se añadió traza (tras `DEBUG`) del
+  estado del sellado y del número de entradas protegidas para diagnóstico.
 - **El rastreador (libro) cortaba las frases fuera de la página.** Project
   Zomboid no ajusta `drawText()` al ancho del contenedor y la página derecha
   del libro es la mitad de ancha que el panel anterior, así que las frases

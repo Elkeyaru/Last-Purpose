@@ -156,18 +156,23 @@ common/media/lua/shared/LastPurpose/LP_Heists.lua
   12.1 para por qué está todo en un solo archivo a propósito.
 
 42/media/lua/client/LastPurpose/
-  LP_State.lua        Detección del Ladrón y acceso a los datos persistentes.
-  LP_Thought.lua       Pensamientos flotantes azules de ocho segundos.
-  LP_BurglarStory.lua   Activación del prólogo y escaneo del equipo necesario.
-  LP_RadioStory.lua      Detección del mensaje de radio y reacción del personaje.
-  LP_HeistStory.lua       Marcador dinámico en el mapa del mundo.
-  LP_Investigation.lua     Pista, lectura vanilla de la nota, reconocimiento.
-  LP_BankSecurity.lua       Perímetro protegido del banco y alarma anticipada.
-  LP_HeistLoot.lua           Escena del botín sellado y su recogida.
-  LP_HeistEscape.lua          Alarma de 35 segundos y las cinco oleadas.
-  LP_SafehouseAnchor.lua       Mesa, refugio, huida, regreso y recompensa.
-  LP_Tracker.lua                Interfaz de libro descrita en la sección 5.
-  LP_Main.lua                    Orden de carga y registro de eventos.
+  LP_Options.lua       Panel Opciones -> Mods -> Last Purpose (PZAPI.ModOptions).
+  LP_State.lua          Detección del Ladrón y acceso a los datos persistentes.
+  LP_Thought.lua         Pensamientos flotantes azules de ocho segundos.
+  LP_BurglarStory.lua     Activación del prólogo y escaneo del equipo necesario.
+  LP_RadioStory.lua        Detección del mensaje de radio y reacción del personaje.
+  LP_HeistStory.lua         Marcador dinámico en el mapa del mundo.
+  LP_Investigation.lua       Pista, lectura vanilla de la nota, reconocimiento.
+  LP_BankSecurity.lua         Perímetro sellado del banco y guardias de acción.
+  LP_HeistLoot.lua             Escena del botín sellado y su recogida.
+  LP_HeistEscape.lua            Alarma de 35 segundos y las cinco oleadas.
+  LP_SafehouseAnchor.lua        Mesa, refugio, huida, regreso y recompensa.
+  LP_Tracker.lua                 Interfaz de libro descrita en la sección 5.
+  LP_Main.lua                     Orden de carga y registro de eventos.
+
+El panel de opciones expone la tecla del diario (por defecto J) y una
+casilla de registro de depuración que enciende LastPurpose.DEBUG en caliente.
+El diario se vuelve inaccesible en cuanto la etapa llega a `completed`.
 
 42/media/lua/server/LastPurpose/LP_RadioChannel.lua
   Elección segura de frecuencia y emisiones cada media hora, con las
@@ -332,8 +337,18 @@ ventanas (salud 100000, bloqueo permanente) mientras `shouldRemainProtected`
 es cierto, y libera todo al salir de esa ventana de etapas o al alejarse del
 banco. `shouldRemainProtected` depende solo de la etapa (`note_read` hasta
 `heist_active`, exclusivo), ya no de la hora: el banco sigue sellado aunque
-sea de noche hasta que el jugador llega e inicia el golpe. Cuenta cristales
-rotos por transición de estado (no por conteo
+sea de noche hasta que el jugador llega e inicia el golpe.
+
+`setHealth`/`setIsLocked` no basta en B42 (romper un cristal a mano llama
+directo a `IsoPlayer:smashWindow()` sin mirar la salud; el mazo, forzar la
+cerradura o pasar por la ventana son otras vías). Por eso `LastPurpose.installBankActionGuards()`
+envuelve `isValid()` de `ISSmashWindow`, `ISOpenCloseDoor`,
+`ISClimbThroughWindow` e `ISDestroyStuffAction`: si el objetivo es una
+entrada sellada (`isProtectedBankEntrance`), la acción se rechaza antes de
+arrancar. La envoltura es idempotente (flag `LastPurposeSealGuard`) y se
+reintenta cada minuto por si el motor cargó esa clase después.
+
+Cuenta cristales rotos por transición de estado (no por conteo
 directo en cada tick) para no inflar el contador. Reconstruye su caché de
 entradas en cada `updateBankSecurity()` porque se pierde al cargar partida.
 
