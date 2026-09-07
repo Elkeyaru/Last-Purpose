@@ -51,10 +51,12 @@ golpe aleatorio por partida y se incorporen historias de otras profesiones.
    acción vanilla del juego (recogerla no alcanza).
 8. Al terminar la lectura, la nota revela el Knox Bank de Louisville.
 9. El jugador reconoce el banco sin entrar (acercarse entre 35 y 90 casillas).
-10. Espera la ventana nocturna (20:00–05:00). Antes de esa hora, el perímetro
-    completo del banco está protegido (puertas y ventanas bloqueadas).
-11. Al abrirse la ventana nocturna puede entrar. Encuentra una bolsa sellada
-    junto a dos cadáveres.
+10. Espera la ventana nocturna (20:00–05:00). El perímetro completo del banco
+    (puertas y ventanas) permanece bloqueado hasta que el golpe se inicia:
+    ya no se libera solo porque el reloj llegue a las 20:00.
+11. Ya de noche, al acercarse al banco el golpe se inicia (etapa
+    `heist_active`) y recién entonces se pueden abrir puertas y romper
+    cristales. Encuentra una bolsa sellada junto a dos cadáveres.
 12. Al recogerla se activa una alarma de 35 segundos y cinco oleadas de 40
     zombis (200 en total). Romper más de dos cristales antes de tiempo
     dispara una alarma anticipada equivalente.
@@ -328,7 +330,10 @@ La lectura de la nota exige la acción vanilla de lectura completa
 Perímetro exacto en `LastPurpose.World.BANK_PERIMETER`. Protege puertas y
 ventanas (salud 100000, bloqueo permanente) mientras `shouldRemainProtected`
 es cierto, y libera todo al salir de esa ventana de etapas o al alejarse del
-banco. Cuenta cristales rotos por transición de estado (no por conteo
+banco. `shouldRemainProtected` depende solo de la etapa (`note_read` hasta
+`heist_active`, exclusivo), ya no de la hora: el banco sigue sellado aunque
+sea de noche hasta que el jugador llega e inicia el golpe. Cuenta cristales
+rotos por transición de estado (no por conteo
 directo en cada tick) para no inflar el contador. Reconstruye su caché de
 entradas en cada `updateBankSecurity()` porque se pierde al cargar partida.
 

@@ -146,149 +146,196 @@ function LPGoalTracker:update()
     if self.dragging and not isMouseButtonDown(0) then self:stopDragging() end
 end
 
--- ===== Contenido de la pagina derecha por etapa exacta (igual que antes,
--- solo repintado con tinta sobre pergamino en vez de HUD oscuro) =====
+-- ===== Contenido de la pagina derecha por etapa exacta =====
+--
+-- Project Zomboid no recorta drawText() al ancho del contenedor, asi que las
+-- frases largas se salian por el borde derecho del libro. Ahora todo el
+-- texto pasa por drawWrapped(): parte la frase en palabras, mide cada linea
+-- con el TextManager y devuelve la Y siguiente. Cada renderer avanza un
+-- cursor vertical con ese valor en vez de usar desplazamientos fijos
+-- (y + 28, y + 52...) que se solapaban en cuanto una linea se ajustaba a dos.
 
+local BODY_GAP = 8
+
+local function lineHeight(font)
+    return getTextManager():getFontHeight(font) + 3
+end
+
+local function drawWrapped(self, x, y, w, text, color, font)
+    font = font or UIFont.Small
+    local tm = getTextManager()
+    local lh = lineHeight(font)
+    local line = ""
+    for word in string.gmatch(tostring(text), "%S+") do
+        local candidate = (line == "") and word or (line .. " " .. word)
+        if line ~= "" and tm:MeasureStringX(font, candidate) > w then
+            self:drawText(line, x, y, color[1], color[2], color[3], 1, font)
+            y = y + lh
+            line = word
+        else
+            line = candidate
+        end
+    end
+    if line ~= "" then
+        self:drawText(line, x, y, color[1], color[2], color[3], 1, font)
+        y = y + lh
+    end
+    return y
+end
+
+-- Compat: una sola linea sin ajuste, solo para textos cortos garantizados
+-- (el aviso de "sin historia para esta profesion").
 local function drawLine(self, x, text, y, color)
     self:drawText(text, x, y, color[1], color[2], color[3], 1, UIFont.Small)
+end
+
+local function drawTitle(self, x, y, w, text)
+    return drawWrapped(self, x, y, w, text, INK.title, UIFont.Medium) + BODY_GAP
+end
+
+local function drawBody(self, x, y, w, text, color)
+    return drawWrapped(self, x, y, w, text, color or INK.body, UIFont.Small)
 end
 
 local function drawPrepStage(self, x, y, w, player, data)
     local days = LastPurpose.getDaysSurvived(player)
     local remaining = math.max(0, LastPurpose.ACTIVATION_DAYS - days)
 
-    self:drawText("Algo quedo pendiente...", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
+    local cy = drawTitle(self, x, y, w, "Algo quedo pendiente...")
     if LastPurpose.DEBUG_FAST_ACTIVATION then
-        drawLine(self, x, string.format("Sobrevive %.0f minutos mas", remaining * 24 * 60), y + 28, INK.body)
+        cy = drawBody(self, x, cy, w, string.format("Sobrevive %.0f minutos mas", remaining * 24 * 60))
     else
-        drawLine(self, x, string.format("Sobrevive %.1f dias mas", remaining), y + 28, INK.body)
+        cy = drawBody(self, x, cy, w, string.format("Sobrevive %.1f dias mas", remaining))
     end
 
+    cy = cy + 6
     local progress = math.min(days / LastPurpose.ACTIVATION_DAYS, 1)
-    local barWidth = w
-    self:drawRect(x, y + 58, barWidth, 10, 0.35, 0.55, 0.42, 0.28)
-    self:drawRect(x + 2, y + 60, math.max(0, (barWidth - 4) * progress), 6, 0.85, 0.35, 0.12, 0.10)
-    self:drawRectBorder(x, y + 58, barWidth, 10, 0.55, 0.40, 0.30, 0.20)
+    self:drawRect(x, cy, w, 10, 0.35, 0.55, 0.42, 0.28)
+    self:drawRect(x + 2, cy + 2, math.max(0, (w - 4) * progress), 6, 0.85, 0.35, 0.12, 0.10)
+    self:drawRectBorder(x, cy, w, 10, 0.55, 0.40, 0.30, 0.20)
+    cy = cy + 20
 
     if LastPurpose.DEBUG_FAST_ACTIVATION then
-        drawLine(self, x, string.format("Minuto %.0f / %d", days * 24 * 60, LastPurpose.ACTIVATION_MINUTES), y + 78, INK.muted)
+        drawBody(self, x, cy, w, string.format("Minuto %.0f / %d", days * 24 * 60, LastPurpose.ACTIVATION_MINUTES), INK.muted)
     else
-        drawLine(self, x, string.format("Dia %.1f / %d", days, LastPurpose.ACTIVATION_DAYS), y + 78, INK.muted)
+        drawBody(self, x, cy, w, string.format("Dia %.1f / %d", days, LastPurpose.ACTIVATION_DAYS), INK.muted)
     end
 end
 
-local function drawObjectives(self, x, y, data)
-    self:drawText("Preparar el golpe", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    for index, goal in ipairs(LastPurpose.OBJECTIVES) do
+local function drawObjectives(self, x, y, w, data)
+    local cy = drawTitle(self, x, y, w, "Preparar el golpe")
+    for _, goal in ipairs(LastPurpose.OBJECTIVES) do
         local done = data.objectives[goal.key] == true
         local color = done and INK.done or INK.muted
-        drawLine(self, x, (done and "[X] " or "[ ] ") .. goal.label, y + 26 + ((index - 1) * ROW_HEIGHT), color)
+        cy = drawBody(self, x, cy, w, (done and "[X] " or "[ ] ") .. goal.label, color)
     end
 end
 
-local function drawPrepCompleted(self, x, y)
-    self:drawText("Mision completada", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Ya tienes todo lo necesario.", y + 28, INK.body)
+local function drawPrepCompleted(self, x, y, w)
+    local cy = drawTitle(self, x, y, w, "Mision completada")
+    drawBody(self, x, cy, w, "Ya tienes todo lo necesario.")
 end
 
 local function drawRadioStage(self, x, y, w)
-    self:drawText("Intercepta la transmision", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
+    local cy = drawTitle(self, x, y, w, "Intercepta la transmision")
     if LastPurpose.DEBUG_SHOW_EXACT_FREQUENCY then
         local frequency = LastPurpose.getStoryFrequency()
-        drawLine(self, x, "Frecuencia de depuracion:", y + 28, INK.muted)
-        self:drawText(
+        cy = drawBody(self, x, cy, w, "Frecuencia de depuracion:", INK.muted)
+        drawWrapped(self, x, cy, w,
             frequency and string.format("%.1f MHz", frequency / 1000) or "Esperando registro del canal...",
-            x, y + 52, INK.current[1], INK.current[2], INK.current[3], 1, UIFont.Medium
-        )
+            INK.current, UIFont.Medium)
         return
     end
 
-    drawLine(self, x, "Prueba estas posibles frecuencias:", y + 26, INK.body)
+    cy = drawBody(self, x, cy, w, "Prueba estas posibles frecuencias:")
     local candidates = LastPurpose.getStoryFrequencyCandidates()
     if not candidates or #candidates == 0 then
-        drawLine(self, x, "Buscando senales disponibles...", y + 50, INK.current)
+        drawBody(self, x, cy, w, "Buscando senales disponibles...", INK.current)
         return
     end
+    cy = cy + 4
+    local colW = w / 2
+    local rowH = lineHeight(UIFont.Small) + 2
     for i = 1, math.min(#candidates, 10) do
         local column = math.floor((i - 1) / 5)
         local row = (i - 1) % 5
         self:drawText(
             string.format("%.1f MHz", candidates[i] / 1000),
-            x + column * (w / 2), y + 48 + row * 20,
+            x + column * colW, cy + row * rowH,
             INK.current[1], INK.current[2], INK.current[3], 1, UIFont.Small
         )
     end
 end
 
-local function drawClueStage(self, x, y, player, data)
+local function drawClueStage(self, x, y, w, player, data)
     local heist = LastPurpose.ensureSelectedHeist(player)
     local clue = heist and LastPurpose.getHeistClue(data, heist)
-    self:drawText("Investiga la pista", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, clue and clue.destination or "Punto de reunion desconocido", y + 28, INK.current)
+    local cy = drawTitle(self, x, y, w, "Investiga la pista")
+    cy = drawBody(self, x, cy, w, clue and clue.destination or "Punto de reunion desconocido", INK.current)
     if clue then
         local dx, dy = clue.x - player:getX(), clue.y - player:getY()
-        drawLine(self, x, string.format("Distancia a la pista: %.0f m", math.sqrt(dx * dx + dy * dy)), y + 52, INK.body)
+        drawBody(self, x, cy, w, string.format("Distancia a la pista: %.0f m", math.sqrt(dx * dx + dy * dy)))
     end
 end
 
-local function drawNoteStage(self, x, y, player)
+local function drawNoteStage(self, x, y, w, player)
     local hasNote = LastPurpose.findClueNote and LastPurpose.findClueNote(player) ~= nil
-    self:drawText(hasNote and "Lee la nota" or "Registra el punto", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, hasNote and "Lee la nota cifrada que encontraste." or "Encuentra la nota que dejaron atras.", y + 28, INK.current)
-    drawLine(self, x, hasNote and "Usa la accion de lectura del juego." or "La nota revelara el objetivo.", y + 52, INK.body)
+    local cy = drawTitle(self, x, y, w, hasNote and "Lee la nota" or "Registra el punto")
+    cy = drawBody(self, x, cy, w, hasNote and "Lee la nota cifrada que encontraste." or "Encuentra la nota que dejaron atras.", INK.current)
+    drawBody(self, x, cy, w, hasNote and "Usa la accion de lectura del juego." or "La nota revelara el objetivo.")
 end
 
-local function drawScoutStage(self, x, y, player)
+local function drawScoutStage(self, x, y, w, player)
     local heist = LastPurpose.ensureSelectedHeist(player)
-    self:drawText("Reconoce el objetivo", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, heist and heist.destination or "Knox Bank", y + 28, INK.current)
-    drawLine(self, x, "Acercate al banco sin entrar.", y + 52, INK.body)
+    local cy = drawTitle(self, x, y, w, "Reconoce el objetivo")
+    cy = drawBody(self, x, cy, w, heist and heist.destination or "Knox Bank", INK.current)
+    drawBody(self, x, cy, w, "Acercate al banco sin entrar.")
 end
 
-local function drawWaitForNightStage(self, x, y)
-    self:drawText("Espera la oscuridad", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Reconocimiento completado.", y + 28, INK.done)
-    drawLine(self, x, "Entra al banco entre las 20:00 y 05:00.", y + 52, INK.current)
+local function drawWaitForNightStage(self, x, y, w)
+    local cy = drawTitle(self, x, y, w, "Espera la oscuridad")
+    cy = drawBody(self, x, cy, w, "Reconocimiento completado.", INK.done)
+    drawBody(self, x, cy, w, "El banco sigue sellado. Llega entre las 20:00 y las 05:00 para iniciar el golpe.", INK.current)
 end
 
-local function drawHeistActiveStage(self, x, y, data)
-    self:drawText("El golpe ha comenzado", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Encuentra el botin dentro del banco.", y + 28, INK.current)
-    if data.lootSpawned then drawLine(self, x, "Busca junto a los dos cadaveres.", y + 52, INK.muted) end
+local function drawHeistActiveStage(self, x, y, w, data)
+    local cy = drawTitle(self, x, y, w, "El golpe ha comenzado")
+    cy = drawBody(self, x, cy, w, "Encuentra el botin dentro del banco.", INK.current)
+    if data.lootSpawned then drawBody(self, x, cy, w, "Busca junto a los dos cadaveres.", INK.muted) end
 end
 
-local function drawLootTakenStage(self, x, y, data)
-    self:drawText("Escapa con el botin", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Botin del Knox Bank asegurado.", y + 28, INK.current)
+local function drawLootTakenStage(self, x, y, w, data)
+    local cy = drawTitle(self, x, y, w, "Escapa con el botin")
+    cy = drawBody(self, x, cy, w, "Botin del Knox Bank asegurado.", INK.current)
     if data.ambushTriggered and not data.ambushCompleted then
-        drawLine(self, x, "ALERTA: escapa del banco ahora.", y + 52, INK.alert)
-        drawLine(self, x, string.format("Amenaza: oleada %d / 5", tonumber(data.ambushWavesSpawned) or 0), y + 76, INK.muted)
+        cy = drawBody(self, x, cy, w, "ALERTA: escapa del banco ahora.", INK.alert)
+        drawBody(self, x, cy, w, string.format("Amenaza: oleada %d / 5", tonumber(data.ambushWavesSpawned) or 0), INK.muted)
     else
-        drawLine(self, x, "Sal de Louisville con vida.", y + 52, INK.alert)
+        drawBody(self, x, cy, w, "Sal de Louisville con vida.", INK.alert)
     end
 end
 
-local function drawReturningStage(self, x, y, player, data)
-    self:drawText("Vuelve al refugio", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
+local function drawReturningStage(self, x, y, w, player, data)
+    local cy = drawTitle(self, x, y, w, "Vuelve al refugio")
     if data.safehousePlaced and data.safehouseX then
         local dx, dy = data.safehouseX - player:getX(), data.safehouseY - player:getY()
-        drawLine(self, x, "La mesa marca tu base segura.", y + 28, INK.current)
-        drawLine(self, x, string.format("Distancia al refugio: %.0f m", math.sqrt(dx * dx + dy * dy)), y + 52, INK.body)
+        cy = drawBody(self, x, cy, w, "La mesa marca tu base segura.", INK.current)
+        drawBody(self, x, cy, w, string.format("Distancia al refugio: %.0f m", math.sqrt(dx * dx + dy * dy)))
     else
-        drawLine(self, x, "Debes colocar otra mesa.", y + 28, INK.alert)
+        drawBody(self, x, cy, w, "Debes colocar otra mesa.", INK.alert)
     end
 end
 
-local function drawReviewLootStage(self, x, y)
-    self:drawText("Revisa el botin", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Has vuelto al refugio con vida.", y + 28, INK.done)
-    drawLine(self, x, "Usa la mesa para revisar el botin.", y + 52, INK.body)
+local function drawReviewLootStage(self, x, y, w)
+    local cy = drawTitle(self, x, y, w, "Revisa el botin")
+    cy = drawBody(self, x, cy, w, "Has vuelto al refugio con vida.", INK.done)
+    drawBody(self, x, cy, w, "Usa la mesa para revisar el botin.")
 end
 
-local function drawCompletedStage(self, x, y)
-    self:drawText("Golpe completado", x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-    drawLine(self, x, "Has vuelto al refugio con vida.", y + 28, INK.done)
-    drawLine(self, x, "Recompensa asegurada.", y + 52, INK.body)
+local function drawCompletedStage(self, x, y, w)
+    local cy = drawTitle(self, x, y, w, "Golpe completado")
+    cy = drawBody(self, x, cy, w, "Has vuelto al refugio con vida.", INK.done)
+    drawBody(self, x, cy, w, "Recompensa asegurada.")
 end
 
 -- Una entrada por etapa exacta (no por capitulo): un mismo capitulo del
@@ -296,15 +343,15 @@ end
 -- de reunion" cubre tanto viajar hasta el punto como leer la nota).
 local STAGE_RENDERERS = {
     radio_prompted = function(self, x, y, w, player, data) drawRadioStage(self, x, y, w) end,
-    radio_heard = function(self, x, y, w, player, data) drawClueStage(self, x, y, player, data) end,
-    clue_found = function(self, x, y, w, player, data) drawNoteStage(self, x, y, player) end,
-    note_read = function(self, x, y, w, player, data) drawScoutStage(self, x, y, player) end,
-    bank_scouted = function(self, x, y, w, player, data) drawWaitForNightStage(self, x, y) end,
-    heist_active = function(self, x, y, w, player, data) drawHeistActiveStage(self, x, y, data) end,
-    loot_taken = function(self, x, y, w, player, data) drawLootTakenStage(self, x, y, data) end,
-    returning = function(self, x, y, w, player, data) drawReturningStage(self, x, y, player, data) end,
-    review_loot = function(self, x, y, w, player, data) drawReviewLootStage(self, x, y) end,
-    completed = function(self, x, y, w, player, data) drawCompletedStage(self, x, y) end,
+    radio_heard = function(self, x, y, w, player, data) drawClueStage(self, x, y, w, player, data) end,
+    clue_found = function(self, x, y, w, player, data) drawNoteStage(self, x, y, w, player) end,
+    note_read = function(self, x, y, w, player, data) drawScoutStage(self, x, y, w, player) end,
+    bank_scouted = function(self, x, y, w, player, data) drawWaitForNightStage(self, x, y, w) end,
+    heist_active = function(self, x, y, w, player, data) drawHeistActiveStage(self, x, y, w, data) end,
+    loot_taken = function(self, x, y, w, player, data) drawLootTakenStage(self, x, y, w, data) end,
+    returning = function(self, x, y, w, player, data) drawReturningStage(self, x, y, w, player, data) end,
+    review_loot = function(self, x, y, w, player, data) drawReviewLootStage(self, x, y, w) end,
+    completed = function(self, x, y, w, player, data) drawCompletedStage(self, x, y, w) end,
 }
 
 local function drawRightPage(self, x, y, w, player, data)
@@ -313,11 +360,11 @@ local function drawRightPage(self, x, y, w, player, data)
         return
     end
     if LastPurpose.stageIs(data, "prep_started") then
-        drawObjectives(self, x, y, data)
+        drawObjectives(self, x, y, w, data)
         return
     end
     if LastPurpose.stageIs(data, "prep_completed") then
-        drawPrepCompleted(self, x, y)
+        drawPrepCompleted(self, x, y, w)
         return
     end
 
@@ -326,8 +373,8 @@ local function drawRightPage(self, x, y, w, player, data)
     if self.selectedChapterId and self.selectedChapterId ~= self.currentChapterId then
         for _, chapter in ipairs(CHAPTERS) do
             if chapter.id == self.selectedChapterId then
-                self:drawText(chapter.title, x, y, INK.title[1], INK.title[2], INK.title[3], 1, UIFont.Medium)
-                drawLine(self, x, chapter.recap, y + 28, INK.body)
+                local cy = drawTitle(self, x, y, w, chapter.title)
+                drawBody(self, x, cy, w, chapter.recap)
                 return
             end
         end

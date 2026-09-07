@@ -5,6 +5,26 @@ código Lua (arquitectura nueva, mismo contenido narrativo). Las versiones
 0.1.x–0.7.2 son el desarrollo original y quedan documentadas aquí solo como
 referencia histórica.
 
+## Sin publicar
+
+### Corregido
+- **El perímetro del Knox Bank se abría al dar las 20:00.** `shouldRemainProtected`
+  liberaba puertas y ventanas en cuanto era de noche y el banco estaba
+  reconocido, aunque el jugador todavía no hubiera iniciado el golpe. Eso
+  dejaba una franja (son las 20:00 pero el jugador aún no llegó al banco, o
+  está en una esquina del perímetro fuera del radio de 35 casillas que
+  dispara `heist_active`) con el banco abierto. Ahora la protección depende
+  solo de la etapa (`note_read` hasta `heist_active`, exclusivo): el banco
+  sigue sellado aunque sea de noche hasta que el jugador llega y el golpe
+  arranca de verdad (`LP_BankSecurity.lua`).
+- **El rastreador (libro) cortaba las frases fuera de la página.** Project
+  Zomboid no ajusta `drawText()` al ancho del contenedor y la página derecha
+  del libro es la mitad de ancha que el panel anterior, así que las frases
+  largas y las recapitulaciones de capítulo se salían por el borde. Todo el
+  texto de la página pasa ahora por `drawWrapped()`, que parte la frase en
+  líneas medidas y devuelve un cursor vertical; los renderers avanzan con ese
+  cursor en vez de con desplazamientos fijos (`LP_Tracker.lua`).
+
 ## 1.1.0 — 2026-09-07
 
 ### Cambiado

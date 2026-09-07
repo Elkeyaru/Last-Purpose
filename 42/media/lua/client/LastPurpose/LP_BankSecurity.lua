@@ -73,10 +73,14 @@ end
 local function shouldRemainProtected(player)
     if not player or not LastPurpose.isBurglar(player) then return false end
     local data = LastPurpose.getData(player)
-    if not LastPurpose.stageBetween(data, "note_read", "heist_active") then return false end
-    local hour = getGameTime():getHour()
-    local isNight = hour >= LastPurpose.World.NIGHT_START_HOUR or hour < LastPurpose.World.NIGHT_END_HOUR
-    return not (LastPurpose.stageAtLeast(data, "bank_scouted") and isNight)
+    -- El perimetro queda sellado desde que se lee la nota hasta que el golpe
+    -- arranca de verdad (heist_active). Antes se liberaba solo con que fuera
+    -- de noche y el banco estuviera reconocido, aunque el jugador todavia no
+    -- hubiera iniciado el golpe: eso dejaba puertas y ventanas abiertas en la
+    -- franja entre "son las 20:00" y "el jugador llego al banco". Ahora tiene
+    -- que llegar al banco dentro de la ventana nocturna para que la etapa
+    -- pase a heist_active, y recien entonces se puede abrir o romper nada.
+    return LastPurpose.stageBetween(data, "note_read", "heist_active")
 end
 
 function LastPurpose.enforceBankSecurity()

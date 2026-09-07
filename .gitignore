@@ -1,5 +1,6 @@
 # Local backups and packaged builds
 .backups/
+.releases/
 *.zip
 
 # Project Zomboid local data
