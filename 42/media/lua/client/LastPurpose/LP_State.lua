@@ -1,50 +1,83 @@
 LastPurpose = LastPurpose or {}
-function LastPurpose.getPlayerSafe(i) if i~=nil then return getSpecificPlayer(i) end return getPlayer() end
-function LastPurpose.isBurglar(p)
- if not p then return false end
- local profession=nil
- if p.getDescriptor and p:getDescriptor() and p:getDescriptor().getProfession then profession=p:getDescriptor():getProfession() end
- if not profession and p.getProfession then profession=p:getProfession() end
- profession=string.lower(tostring(profession or ""))
- if string.find(profession,"burglar",1,true) then return true end
- if p.getCharacterTraits then
-  local traits=p:getCharacterTraits()
-  if traits and CharacterTrait and CharacterTrait.BURGLAR and traits.get then
-   local ok,value=pcall(function() return traits:get(CharacterTrait.BURGLAR) end)
-   if ok and value then return true end
-  end
-  if traits and traits.getKnownTraits then
-   local known=traits:getKnownTraits()
-   if known and known.size and known.get then for i=0,known:size()-1 do
-    if string.find(string.lower(tostring(known:get(i) or "")),"burglar",1,true) then return true end
-   end end
-  end
- end
- if p.getTraits then
-  local traits=p:getTraits()
-  if traits and traits.size and traits.get then for i=0,traits:size()-1 do
-   if string.find(string.lower(tostring(traits:get(i) or "")),"burglar",1,true) then return true end
-  end end
- end
- if p.HasTrait then for _,id in ipairs({"Burglar","burglar","base:burglar"}) do
-  local ok,value=pcall(function() return p:HasTrait(id) end); if ok and value then return true end
- end end
- return false
+
+function LastPurpose.getPlayerSafe(index)
+    if index ~= nil then return getSpecificPlayer(index) end
+    return getPlayer()
 end
-function LastPurpose.getData(p)
- local root=p:getModData()
- if type(root[LastPurpose.SAVE_KEY])~="table" then root[LastPurpose.SAVE_KEY]={schema=7,storyFlowVersion=2,active=false,completed=false,stage=0,trackerVisible=true,objectives={}} end
- local d=root[LastPurpose.SAVE_KEY]
- if (tonumber(d.schema) or 0)<7 then
-  -- Solo conservamos la ruta directa si el jugador ya habia descubierto el banco.
-  d.storyFlowVersion=(tonumber(d.stage) or 0)>=4 and 1 or 2
- end
- d.schema=7
- if d.storyFlowVersion==nil then d.storyFlowVersion=2 end
- if d.stage==nil then d.stage=d.active and 1 or 0 end
- if d.completed==nil then d.completed=false end
- if d.trackerVisible==nil then d.trackerVisible=true end
- if type(d.objectives)~="table" then d.objectives={} end
- return d
+
+local function traitListContainsBurglar(list)
+    if not list or not list.size or not list.get then return false end
+    local ok, size = pcall(function() return list:size() end)
+    if not ok then return false end
+    for i = 0, size - 1 do
+        local ok2, value = pcall(function() return list:get(i) end)
+        if ok2 and value and string.find(string.lower(tostring(value)), "burglar", 1, true) then
+            return true
+        end
+    end
+    return false
 end
-function LastPurpose.getDaysSurvived(p) if not p or not p.getHoursSurvived then return 0 end return math.max(0,p:getHoursSurvived()/24) end
+
+-- B42 ha expuesto varias APIs distintas para leer la profesion/los rasgos de
+-- un personaje segun el parche. Probamos todas en cascada y protegemos cada
+-- una con pcall: si el motor cambia una firma, perdemos ese metodo de
+-- deteccion, no la sesion completa.
+function LastPurpose.isBurglar(player)
+    if not player then return false end
+
+    local ok, profession = pcall(function()
+        local descriptor = player.getDescriptor and player:getDescriptor()
+        return descriptor and descriptor.getProfession and descriptor:getProfession()
+    end)
+    if ok and profession and string.find(string.lower(tostring(profession)), "burglar", 1, true) then
+        return true
+    end
+
+    local ok2, traits = pcall(function() return player.getCharacterTraits and player:getCharacterTraits() end)
+    if ok2 and traits then
+        local ok3, hasIt = pcall(function()
+            return CharacterTrait and CharacterTrait.BURGLAR and traits:get(CharacterTrait.BURGLAR)
+        end)
+        if ok3 and hasIt then return true end
+
+        local ok4, known = pcall(function() return traits.getKnownTraits and traits:getKnownTraits() end)
+        if ok4 and traitListContainsBurglar(known) then return true end
+    end
+
+    local ok5, legacyTraits = pcall(function() return player.getTraits and player:getTraits() end)
+    if ok5 and traitListContainsBurglar(legacyTraits) then return true end
+
+    for _, id in ipairs({ "Burglar", "burglar", "base:burglar" }) do
+        local ok6, hasIt = pcall(function() return player.HasTrait and player:HasTrait(id) end)
+        if ok6 and hasIt then return true end
+    end
+
+    return false
+end
+
+-- Crea, normaliza y devuelve la tabla de progreso persistente del jugador.
+-- No hay migracion de esquemas antiguos aqui a proposito: esta es una
+-- reconstruccion desde cero, sin compromiso de compatibilidad con guardados
+-- de las versiones anteriores del mod.
+function LastPurpose.getData(player)
+    local root = player:getModData()
+    if type(root[LastPurpose.SAVE_KEY]) ~= "table" then
+        root[LastPurpose.SAVE_KEY] = {
+            schema = LastPurpose.SCHEMA,
+            stage = "inactive",
+            trackerVisible = true,
+            objectives = {},
+        }
+    end
+    local data = root[LastPurpose.SAVE_KEY]
+    if type(data.stage) ~= "string" then data.stage = "inactive" end
+    if data.trackerVisible == nil then data.trackerVisible = true end
+    if type(data.objectives) ~= "table" then data.objectives = {} end
+    data.schema = LastPurpose.SCHEMA
+    return data
+end
+
+function LastPurpose.getDaysSurvived(player)
+    if not player or not player.getHoursSurvived then return 0 end
+    return math.max(0, player:getHoursSurvived() / 24)
+end

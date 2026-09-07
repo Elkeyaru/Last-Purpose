@@ -1,2 +1,0 @@
-LastPurpose = LastPurpose or {}
-

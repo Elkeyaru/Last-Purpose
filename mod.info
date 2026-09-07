@@ -1,7 +1,7 @@
 name=Last Purpose [B42]
 id=LastPurposeB42
-description=Objetivos narrativos de mid-game y late-game basados en la profesion. Prototipo: Ladron.
-version=0.7.0
+description=Objetivos narrativos de mid-game y late-game basados en la profesion. Prototipo: Ladron. Reconstruccion completa del codigo Lua a partir de la documentacion de diseno original.
+version=1.1.0
 versionMin=42.0
 author=ElKeyaru
 pack=lastpurpose_planning_01

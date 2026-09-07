@@ -1,90 +1,71 @@
 # Last Purpose
 
-> Private development repository — Work in progress.
+> Repositorio de desarrollo privado — En curso.
 
-Last Purpose is a narrative progression mod for **Project Zomboid Build 42 stable**. It gives survivors profession-based objectives for the mid-game and late-game.
+Last Purpose es un mod de progresión narrativa para **Project Zomboid Build 42
+estable**. Da a los supervivientes objetivos de mid-game y late-game según su
+profesión.
 
-The current prototype focuses on the Burglar story, **“The Last Heist”** (`El último golpe`).
+El prototipo actual es la historia del Ladrón, **"El último golpe"**
+(`The Last Heist`).
 
-## Current version
+## Versión actual
 
-**0.7.0 (stable)** — Singleplayer, Project Zomboid Build 42 stable.
+**1.1.0 (estable)** — Singleplayer, Project Zomboid Build 42 estable.
+Jugada de principio a fin sin errores atribuibles al mod.
 
-Latest validated release: **0.7.0**.
+Ver `CHANGELOG.md` para el detalle versión por versión y
+`documentacion_mod.txt` para la referencia técnica y de diseño completa.
 
-Implemented:
+## Instalación para pruebas locales
 
-- Burglar detection through Build 42 profession and trait APIs.
-- Prologue activation after 15 survived days.
-- First mission: **“Prepare the Heist”**.
-- Automatic tracking of a crowbar, screwdriver, flashlight, wearable bag/backpack, and a working vehicle with fuel.
-- Persistent progression through `player:getModData()`.
-- Movable objective tracker.
-- `J` toggles the tracker.
-- Backward-compatible save-data migration from versions 0.1.x and 0.2.x.
-- Data-driven heist catalog with a persistent selected job.
-- Blue X map marker for the first Louisville bank target.
-- Automatic arrival detection around the selected building.
-- Unique Knox Bank loot bag with gold, diamonds, and bundled money.
-- Automatic detection when the player takes the heist loot.
-- A 35-second bank alarm and a staged 200-zombie escape encounter.
-- Craftable, rotatable wooden planning table with native Build 42 sprites and an open book.
-- Automatic safehouse registration when the planning table is placed, indoors or outdoors.
-- Dynamic return objective after escaping 520 tiles from the bank with the loot.
-- One-time completion reward at the safehouse: two Nimble levels and a mid/late-game supply package.
-- Sealed bank loot that cannot be opened during the escape; reviewing it unlocks a 28-capacity reward bag.
-- Modular Lua architecture.
-- Collision-aware random radio frequency and narrative broadcasts every 30 in-game minutes.
-- The tracker presents ten possible frequencies without revealing which one is correct.
-- Second story stage: intercept the conversation about the Louisville bank.
-- Extended pre-heist investigation: randomized meeting point, mandatory coded-note reading, bank reconnaissance, and a night-time entry window.
-- Fixed black visual identity for the sealed loot and its unlocked reward bag.
-
-## Planned direction
-
-The long-term design includes one randomly selected heist per playthrough, followed by access to other profession story chains, important locations, unique rewards, and post-year-one repeatable events.
-
-Planned profession stories include Burglar, Lumberjack, Veteran, Mechanic, Doctor, and Unemployed.
-
-Integrations with other mods may be added later, but they should remain optional so Last Purpose can run independently.
-
-## Installation for local testing
-
-Place the repository at:
+Coloca el contenido de este repositorio en:
 
 ```text
-C:\Users\<username>\Zomboid\mods\LastPurpose
+C:\Users\<usuario>\Zomboid\mods\LastPurpose
 ```
 
-Start Project Zomboid Build 42 stable and enable **Last Purpose [B42]** in the Mods menu and in the selected save configuration.
+Inicia Project Zomboid Build 42 estable y activa **Last Purpose [B42]** en el
+menú de mods y en la configuración de la partida.
 
-## Project structure
+## Estructura del proyecto
 
 ```text
 LastPurpose/
 ├── mod.info
+├── documentacion_mod.txt      (referencia técnica y de diseño completa)
+├── CHANGELOG.md
 ├── 42/
 │   ├── mod.info
 │   └── media/
-│       ├── lastpurpose_planning_01.tiles
+│       ├── lastpurpose_planning_01.tiles(.txt)
 │       ├── texturepacks/lastpurpose_planning_01.pack
 │       ├── textures/Item_LastPurpose_PlanningTable.png
-│       └── lua/client/LastPurpose/
+│       └── lua/
+│           ├── client/LastPurpose/    (12 archivos, uno por sistema)
+│           └── server/LastPurpose/LP_RadioChannel.lua
 └── common/media/
-    ├── scripts/LastPurpose_PlanningTable.txt
-    └── lua/shared/
+    ├── scripts/                (definiciones de mesa, nota y bolsas)
+    └── lua/shared/LastPurpose/LP_Heists.lua   (único archivo compartido)
 ```
 
-See `documentacion_mod.txt` for the single Spanish technical and design reference. Historical changes remain in `CHANGELOG.md`.
+## Notas de arquitectura
 
-## Development status
-
-The published stable version is 0.7.0. The working tree also contains the next development iteration: 21 randomized clue sites, mandatory vanilla note reading, a full rectangular Knox Bank security perimeter, removal of the getaway parking step, and a conditional second 200-zombie exit ambush. These changes require a complete in-game validation before the next release.
+`common/media/lua/shared/` contiene un único archivo Lua a propósito: el
+motor de Project Zomboid carga cada archivo de forma independiente y
+alfabética, y un archivo compartido que depende de otro archivo compartido
+no tiene garantizado el orden de carga entre ambos. Ver la sección 12.1 de
+`documentacion_mod.txt` para el detalle completo, incluido el bug real que
+esto causó en la v1.0.0 y cómo se corrigió en la v1.0.1.
 
 ## Rights
 
 Copyright © 2026 ElKeyaru. All rights reserved.
 
-The source code is private and proprietary. Viewing or receiving access does not grant permission to copy, modify, redistribute, publish, sublicense, or create derivative works. See `LICENSE`.
+The source code is private and proprietary. Viewing or receiving access does
+not grant permission to copy, modify, redistribute, publish, sublicense, or
+create derivative works. See `LICENSE`.
 
-Project Zomboid and related names and assets belong to their respective owners. This is an unofficial fan-made mod and is not affiliated with or endorsed by The Indie Stone.
+Project Zomboid and related names and assets belong to their respective
+owners. This is an unofficial fan-made mod and is not affiliated with or
+endorsed by The Indie Stone.

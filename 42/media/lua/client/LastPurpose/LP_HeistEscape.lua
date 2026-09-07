@@ -1,6 +1,8 @@
 LastPurpose = LastPurpose or {}
 
-local ALARM_X, ALARM_Y, ALARM_Z = 12562, 1690, 0
+-- Funcion, no una constante de archivo: LastPurpose.World vive en un archivo
+-- compartido que puede no haber cargado todavia cuando este archivo carga.
+local function ORIGIN() return LastPurpose.World.ALARM_ORIGIN end
 local ALARM_DURATION_MS = 35000
 local WAVE_COUNT = 5
 local ZOMBIES_PER_WAVE = 40
@@ -8,61 +10,64 @@ local CLUSTERS_PER_WAVE = 5
 local WAVE_INTERVAL_MS = 750
 local SPAWN_MIN_RADIUS = 30
 local SPAWN_MAX_RADIUS = 50
-local AMBUSH_VERSION = 3
-local BANK_MIN_X, BANK_MAX_X = 12560, 12583
-local BANK_MIN_Y, BANK_MAX_Y = 1687, 1737
 
 LastPurpose.heistAlarmRuntime = LastPurpose.heistAlarmRuntime or {}
 LastPurpose.heistEscapeActive = LastPurpose.heistEscapeActive or false
 
 local function startAlarm(player, data, now)
     local runtime = LastPurpose.heistAlarmRuntime
-    runtime.startedAt = now
+    -- Si veniamos de recuperar una partida guardada a mitad de la alarma,
+    -- retomamos el tiempo restante en vez de reiniciar los 35 segundos.
+    local remaining = math.max(0, math.min(ALARM_DURATION_MS, tonumber(data.ambushRemainingMs) or ALARM_DURATION_MS))
+    runtime.startedAt = now - (ALARM_DURATION_MS - remaining)
     runtime.nextWaveAt = now
     runtime.nextNoiseAt = now
     runtime.soundId = nil
 
-    local ok, soundId = pcall(function()
-        return player:getEmitter():playSound("HouseAlarm")
-    end)
+    local ok, soundId = pcall(function() return player:getEmitter():playSound("HouseAlarm") end)
     if ok then runtime.soundId = soundId end
 
     data.ambushTriggered = true
-    data.ambushVersion = AMBUSH_VERSION
-    data.ambushStartedAtHours = player:getHoursSurvived()
     data.ambushWavesSpawned = tonumber(data.ambushWavesSpawned) or 0
-    print("[LastPurpose] Alarma del Knox Bank activada durante 35 segundos")
+    LastPurpose.debugPrint("Alarma del Knox Bank activada")
 end
 
+-- Genera una oleada grupo por grupo. Si el motor falla a mitad de una
+-- oleada, recordamos que grupos ya se procesaron para no repetirlos en el
+-- siguiente intento.
 local function spawnWave(data)
     local spawned = 0
     local clusterSize = math.floor(ZOMBIES_PER_WAVE / CLUSTERS_PER_WAVE)
     local baseAngle = ZombRand(360)
-    local ok, err = pcall(function()
-        for cluster = 0, CLUSTERS_PER_WAVE - 1 do
+    local firstCluster = tonumber(data.ambushClustersProcessed) or 0
+
+    for cluster = firstCluster, CLUSTERS_PER_WAVE - 1 do
+        data.ambushClustersProcessed = cluster + 1
+        local ok, err = pcall(function()
             local angle = math.rad(baseAngle + math.floor((360 / CLUSTERS_PER_WAVE) * cluster) + ZombRand(-12, 13))
             local radius = ZombRand(SPAWN_MIN_RADIUS, SPAWN_MAX_RADIUS + 1)
-            local spawnX = math.floor(ALARM_X + math.cos(angle) * radius)
-            local spawnY = math.floor(ALARM_Y + math.sin(angle) * radius)
-            local zombies = addZombiesInOutfit(spawnX, spawnY, ALARM_Z, clusterSize, nil, 50)
+            local spawnX = math.floor(ORIGIN().x + math.cos(angle) * radius)
+            local spawnY = math.floor(ORIGIN().y + math.sin(angle) * radius)
+            local zombies = addZombiesInOutfit(spawnX, spawnY, ORIGIN().z, clusterSize, nil, 50)
             if zombies then
                 for i = 0, zombies:size() - 1 do
                     local zombie = zombies:get(i)
                     if zombie then
-                        zombie:pathToLocation(ALARM_X, ALARM_Y, ALARM_Z)
                         spawned = spawned + 1
+                        pcall(function() zombie:pathToLocation(ORIGIN().x, ORIGIN().y, ORIGIN().z) end)
                     end
                 end
             end
+        end)
+        if not ok then
+            print("[LastPurpose] Grupo de zombis omitido tras un error del motor: " .. tostring(err))
         end
-    end)
-    if not ok then
-        print("[LastPurpose] Error creando oleada del banco: " .. tostring(err))
-        return false
     end
+
+    data.ambushClustersProcessed = 0
     data.ambushWavesSpawned = (tonumber(data.ambushWavesSpawned) or 0) + 1
     data.ambushZombiesSpawned = (tonumber(data.ambushZombiesSpawned) or 0) + spawned
-    print(string.format("[LastPurpose] Oleada %d/%d creada: %d zombis cercanos", data.ambushWavesSpawned, WAVE_COUNT, spawned))
+    LastPurpose.debugPrint(string.format("Oleada %d/%d: %d zombis generados", data.ambushWavesSpawned, WAVE_COUNT, spawned))
     return true
 end
 
@@ -71,64 +76,59 @@ local function stopAlarm(player, data)
     if runtime.soundId then
         pcall(function() player:getEmitter():stopSound(runtime.soundId) end)
     end
-    runtime.startedAt = nil
-    runtime.nextWaveAt = nil
-    runtime.nextNoiseAt = nil
-    runtime.soundId = nil
+    runtime.startedAt, runtime.nextWaveAt, runtime.nextNoiseAt, runtime.soundId = nil, nil, nil, nil
     data.ambushCompleted = true
-    data.ambushCompletedAtHours = player:getHoursSurvived()
-    print(string.format("[LastPurpose] Emboscada completada: %d zombis solicitados", WAVE_COUNT * ZOMBIES_PER_WAVE))
+    data.ambushRemainingMs = 0
+    LastPurpose.debugPrint(string.format(
+        "Emboscada completada: %d zombis confirmados de %d previstos",
+        tonumber(data.ambushZombiesSpawned) or 0, WAVE_COUNT * ZOMBIES_PER_WAVE
+    ))
 end
 
+-- Prepara una emboscada nueva y completa. Se llama al recoger el botin
+-- (waitForExit=false, arranca de inmediato) o al preparar la segunda
+-- emboscada de salida tras una alarma anticipada (waitForExit=true).
 function LastPurpose.prepareExitAmbush(player, data, waitForExit)
     local runtime = LastPurpose.heistAlarmRuntime
     if runtime.soundId then
         pcall(function() player:getEmitter():stopSound(runtime.soundId) end)
     end
-    runtime.startedAt = nil
-    runtime.nextWaveAt = nil
-    runtime.nextNoiseAt = nil
-    runtime.soundId = nil
+    runtime.startedAt, runtime.nextWaveAt, runtime.nextNoiseAt, runtime.soundId = nil, nil, nil, nil
+
     data.ambushTriggered = false
     data.ambushCompleted = false
     data.ambushForced = false
     data.ambushWavesSpawned = 0
     data.ambushZombiesSpawned = 0
-    data.ambushVersion = AMBUSH_VERSION
+    data.ambushClustersProcessed = 0
+    data.ambushRemainingMs = ALARM_DURATION_MS
     data.exitAmbushPrepared = true
     data.exitAmbushPending = waitForExit == true
     LastPurpose.heistEscapeActive = waitForExit ~= true
-    print(waitForExit and "[LastPurpose] Segunda emboscada preparada para la salida del banco" or "[LastPurpose] Emboscada preparada al recoger el botin")
+    LastPurpose.debugPrint(waitForExit
+        and "Segunda emboscada preparada para la salida del banco"
+        or "Emboscada preparada al recoger el botin")
 end
 
 function LastPurpose.updateHeistEscape()
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    if data.exitAmbushPending and data.lootTaken then
-        local x,y=player:getX(),player:getY()
-        if x<BANK_MIN_X or x>BANK_MAX_X or y<BANK_MIN_Y or y>BANK_MAX_Y then
-            data.exitAmbushPending=false
-            LastPurpose.heistEscapeActive=true
-            print("[LastPurpose] El jugador salio del banco; comienza la segunda emboscada")
+
+    if data.exitAmbushPending and LastPurpose.stageAtLeast(data, "loot_taken") then
+        local perimeter = LastPurpose.World.BANK_PERIMETER
+        local x, y = player:getX(), player:getY()
+        if x < perimeter.minX or x > perimeter.maxX or y < perimeter.minY or y > perimeter.maxY then
+            data.exitAmbushPending = false
+            LastPurpose.heistEscapeActive = true
+            LastPurpose.debugPrint("El jugador salio del banco; comienza la segunda emboscada")
         end
     end
+
     if not LastPurpose.heistEscapeActive then return end
-    local lootStage = data.storyFlowVersion == 2 and 10 or 6
-    if (not data.lootTaken and not data.ambushForced) or (data.stage < lootStage and not data.ambushForced) then
+    if LastPurpose.stageBefore(data, "loot_taken") and not data.ambushForced then
         LastPurpose.heistEscapeActive = false
         return
-    end
-
-    if data.ambushVersion ~= AMBUSH_VERSION then
-        local dx, dy = player:getX() - ALARM_X, player:getY() - ALARM_Y
-        if (dx * dx) + (dy * dy) > (100 * 100) then return end
-        data.ambushTriggered = false
-        data.ambushCompleted = false
-        data.ambushWavesSpawned = 0
-        data.ambushZombiesSpawned = 0
-        data.ambushVersion = AMBUSH_VERSION
-        print("[LastPurpose] Emboscada migrada al asalto inmediato v3")
     end
     if data.ambushCompleted then
         LastPurpose.heistEscapeActive = false
@@ -138,16 +138,17 @@ function LastPurpose.updateHeistEscape()
     local now = getTimestampMs()
     local runtime = LastPurpose.heistAlarmRuntime
     if not runtime.startedAt then startAlarm(player, data, now) end
+    data.ambushRemainingMs = math.max(0, ALARM_DURATION_MS - (now - runtime.startedAt))
 
     if now >= runtime.nextNoiseAt then
-        addSound(player, ALARM_X, ALARM_Y, ALARM_Z, 220, 100)
+        addSound(player, ORIGIN().x, ORIGIN().y, ORIGIN().z, 220, 100)
         runtime.nextNoiseAt = now + 1000
     end
 
     local waves = tonumber(data.ambushWavesSpawned) or 0
     if waves < WAVE_COUNT and now >= runtime.nextWaveAt then
-        if spawnWave(data) then runtime.nextWaveAt = now + WAVE_INTERVAL_MS
-        else runtime.nextWaveAt = now + 1000 end
+        spawnWave(data)
+        runtime.nextWaveAt = now + WAVE_INTERVAL_MS
     end
 
     if now - runtime.startedAt >= ALARM_DURATION_MS and (tonumber(data.ambushWavesSpawned) or 0) >= WAVE_COUNT then
@@ -155,12 +156,13 @@ function LastPurpose.updateHeistEscape()
     end
 end
 
+-- Reactiva la emboscada al cargar una partida que se guardo a mitad de un
+-- asalto en curso.
 function LastPurpose.refreshHeistEscape()
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    local lootStage = data.storyFlowVersion == 2 and 10 or 6
     LastPurpose.heistEscapeActive = (data.exitAmbushPending ~= true)
-        and (data.lootTaken == true and data.stage >= lootStage or data.ambushForced == true)
+        and (LastPurpose.stageAtLeast(data, "loot_taken") or data.ambushForced == true)
         and data.ambushCompleted ~= true
 end

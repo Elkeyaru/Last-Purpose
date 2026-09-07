@@ -3,22 +3,28 @@ require "ISUI/Maps/ISMap"
 
 LastPurpose = LastPurpose or {}
 
+local MAP_REVEAL_RADIUS = 18
+local MAP_ICON_SIZE = 36
+local MAP_ZOOM = 18.0
+
 local function getMapTarget(data, heist)
-    local expanded = data.storyFlowVersion == 2
-    local returnStage = expanded and 11 or 7
-    if data.stage >= returnStage then
+    if LastPurpose.stageAtLeast(data, "returning") then
         if data.safehousePlaced and data.safehouseX and data.safehouseY then
-            return data.safehouseX, data.safehouseY, "REFUGIO", true, "safehouse"
+            return data.safehouseX, data.safehouseY, "REFUGIO", "safehouse"
         end
         return nil
     end
-    local clue = LastPurpose.getHeistClue(data, heist)
-    if expanded and (data.stage == 4 or data.stage == 5) and clue then
-        return clue.x, clue.y, "PISTA", false, "clue"
+
+    if LastPurpose.stageIs(data, "radio_heard") or LastPurpose.stageIs(data, "clue_found") then
+        local clue = LastPurpose.getHeistClue(data, heist)
+        if clue then return clue.x, clue.y, "PISTA", "clue" end
     end
-    return heist.x, heist.y, "OBJETIVO", false, "heist"
+
+    return heist.x, heist.y, "OBJETIVO", "heist"
 end
 
+-- Elige un golpe una unica vez por partida y lo comparte via ModData del
+-- mundo para que el servidor de radio pueda leer el mismo dialogo.
 function LastPurpose.ensureSelectedHeist(player)
     local data = LastPurpose.getData(player)
     if not LastPurpose.getHeist(data.selectedHeist) then
@@ -33,24 +39,23 @@ end
 function LastPurpose.tryAddHeistMapMarker(player)
     if not player then return end
     local data = LastPurpose.getData(player)
-    if data.stage < 4 then return end
+    if LastPurpose.stageBefore(data, "radio_heard") then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
     if not heist then return end
-    local targetX, targetY, _, isSafehouse, targetKey = getMapTarget(data, heist)
+
+    local targetX, targetY, _, targetKey = getMapTarget(data, heist)
     if not targetX then return end
 
     local revealKey = "mapAreaRevealed_" .. tostring(targetKey or "heist")
-    local revealed = data[revealKey]
-    if not revealed then
-        local revealRadius = 18
+    if not data[revealKey] then
         WorldMapVisited.getInstance():setKnownInSquares(
-            targetX - revealRadius,
-            targetY - revealRadius,
-            targetX + revealRadius,
-            targetY + revealRadius
+            targetX - MAP_REVEAL_RADIUS, targetY - MAP_REVEAL_RADIUS,
+            targetX + MAP_REVEAL_RADIUS, targetY + MAP_REVEAL_RADIUS
         )
         data[revealKey] = true
-        print(isSafehouse and "[LastPurpose] Sector del refugio revelado en el mapa" or "[LastPurpose] Sector del golpe revelado en el mapa")
+        LastPurpose.debugPrint(targetKey == "safehouse"
+            and "Sector del refugio revelado en el mapa"
+            or "Sector del objetivo revelado en el mapa")
     end
 
     data.mapMarkerX = targetX
@@ -61,25 +66,28 @@ function LastPurpose.renderHeistMapMarker(mapUI)
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    if data.stage < 4 then return end
+    if LastPurpose.stageBefore(data, "radio_heard") then return end
     local heist = LastPurpose.ensureSelectedHeist(player)
     if not heist or not mapUI.mapAPI then return end
-    local targetX, targetY, label, isSafehouse = getMapTarget(data, heist)
-    if not targetX then return end
-    local centeredKey = isSafehouse and "safehouseMapCenteredOnce" or "mapCenteredOnce"
 
+    local targetX, targetY, label, targetKey = getMapTarget(data, heist)
+    if not targetX then return end
+
+    local centeredKey = targetKey == "safehouse" and "safehouseMapCenteredOnce" or "mapCenteredOnce"
     if not data[centeredKey] then
         mapUI.mapAPI:centerOn(targetX, targetY)
-        mapUI.mapAPI:setZoom(18.0)
+        mapUI.mapAPI:setZoom(MAP_ZOOM)
         data[centeredKey] = true
     end
 
     local uiX = mapUI.mapAPI:worldToUIX(targetX, targetY)
     local uiY = mapUI.mapAPI:worldToUIY(targetX, targetY)
     if uiX < 0 or uiY < 0 or uiX > mapUI.width or uiY > mapUI.height then return end
+
     local texture = getTexture("media/ui/LootableMaps/map_x.png")
     if texture then
-        mapUI:drawTextureScaledAspect(texture, uiX - 18, uiY - 18, 36, 36, 1.0, 0.18, 0.48, 0.95)
+        local half = MAP_ICON_SIZE / 2
+        mapUI:drawTextureScaledAspect(texture, uiX - half, uiY - half, MAP_ICON_SIZE, MAP_ICON_SIZE, 1.0, 0.18, 0.48, 0.95)
     end
     mapUI:drawTextCentre(label, uiX, uiY - 35, 0.25, 0.58, 1.0, 1.0, UIFont.Small)
 end
@@ -88,28 +96,10 @@ if not LastPurpose.worldMapRenderPatched then
     LastPurpose.originalWorldMapRender = ISWorldMap.render
     function ISWorldMap:render()
         LastPurpose.originalWorldMapRender(self)
-        LastPurpose.renderHeistMapMarker(self)
+        local ok, err = pcall(LastPurpose.renderHeistMapMarker, self)
+        if not ok then print("[LastPurpose] ERROR dibujando el marcador del mapa: " .. tostring(err)) end
     end
     LastPurpose.worldMapRenderPatched = true
-end
-
-function LastPurpose.updateHeistArrival(player)
-    if not player then return end
-    local data = LastPurpose.getData(player)
-    if data.storyFlowVersion == 2 then return end
-    if data.stage ~= 4 then return end
-    local heist = LastPurpose.ensureSelectedHeist(player)
-    if not heist then return end
-    local dx = player:getX() - heist.x
-    local dy = player:getY() - heist.y
-    if (dx * dx) + (dy * dy) > (heist.arrivalRadius * heist.arrivalRadius) then return end
-    data.stage = 5
-    data.heistLocationReached = true
-    data.heistReachedAtHours = player:getHoursSurvived()
-    LastPurpose.showThought(player, {
-        "Este es el lugar...",
-        "Ahora tengo que encontrar el botín."
-    })
 end
 
 function LastPurpose.updateHeistMapAndArrival()

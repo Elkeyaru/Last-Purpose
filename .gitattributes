@@ -6,3 +6,5 @@ mod.info text eol=lf
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.tiles binary
+*.pack binary

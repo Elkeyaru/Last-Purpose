@@ -1,11 +1,24 @@
 LAST PURPOSE — DOCUMENTACIÓN MAESTRA DEL PROYECTO
-Estado del código: desarrollo posterior a 0.7.0
-Última versión publicada y recuperable: 0.7.0 estable
+Estado del código: estable y validado en partida (v1.1.0)
 Juego: Project Zomboid Build 42 estable
 Modo compatible actual: Singleplayer
-Autor: ElKeyaru
-Repositorio: https://github.com/Elkeyaru/Last-Purpose
-Última actualización: 5 de septiembre de 2026
+Autor original: ElKeyaru
+Esta reconstrucción (arquitectura, v1.0.0 en adelante): Claude (Anthropic), a pedido de ElKeyaru
+Última actualización: 7 de septiembre de 2026
+
+======================================================================
+0. NOTA SOBRE ESTA VERSIÓN
+======================================================================
+
+A partir de la v1.0.0, el código Lua del mod fue reescrito desde cero,
+usando como especificación la documentación de diseño de la v0.7.x (este
+mismo documento en su versión anterior). El contenido narrativo (coordenadas,
+diálogos, catálogo de recompensas) se mantuvo igual porque ya estaba validado
+en partida real. La arquitectura interna del código cambió de forma
+importante; ver la sección 12 para el detalle técnico.
+
+Esta reescritura NO es compatible con partidas guardadas de las versiones
+0.1.x a 0.7.x. El esquema de datos es nuevo (ver sección 6).
 
 ======================================================================
 1. PROPÓSITO DEL MOD
@@ -16,225 +29,218 @@ identidad del superviviente. Su finalidad es ofrecer motivos para preparar una
 base, viajar, investigar, asumir riesgos y regresar con recompensas valiosas.
 
 El proyecto contiene una historia jugable completa para el Ladrón:
-“El último golpe”. El sistema está preparado para que en el futuro se elija un
+"El último golpe". El sistema está preparado para que en el futuro se elija un
 golpe aleatorio por partida y se incorporen historias de otras profesiones.
 
 ======================================================================
-2. BUCLE JUGABLE DE “EL ÚLTIMO GOLPE”
+2. BUCLE JUGABLE DE "EL ÚLTIMO GOLPE"
 ======================================================================
 
-1. El personaje Ladrón sobrevive 15 días.
-2. Comienza “Preparar el golpe”.
-3. El jugador consigue una palanca, un destornillador, una linterna, una bolsa
-   o mochila y un vehículo funcional con combustible.
-4. Fabrica y coloca una mesa de planificación; esta ubicación se convierte en
+1. El personaje Ladrón sobrevive 15 días (o el tiempo configurado en modo
+   depuración).
+2. Comienza "Preparar el golpe": reunir palanca, destornillador, linterna,
+   bolsa o mochila y un vehículo funcional con combustible.
+3. Fabrica y coloca una mesa de planificación; esa ubicación se convierte en
    el refugio al que deberá regresar.
-5. El personaje piensa que debe revisar la radio.
-6. La interfaz muestra diez frecuencias posibles. Solo una contiene la señal.
-7. El transmisor desconocido repite su mensaje cada 30 minutos del juego.
-8. Al escuchar el mensaje completo aparece una pista en el mapa.
-9. El jugador llega a uno de 21 puntos de reunión posibles y recoge una nota
-   cifrada. Recogerla no es suficiente: debe leerla mediante la acción vanilla.
-10. Al terminar la lectura, la nota revela el Knox Bank de Louisville.
-11. El jugador reconoce el banco sin entrar.
-12. Espera la ventana nocturna, entre las 20:00 y las 05:00. Antes de esa hora,
-    puertas y ventanas del perímetro completo del banco están protegidas.
-13. Al abrirse la ventana nocturna se retira la protección y puede entrar.
-14. Encuentra una bolsa sellada junto a dos cadáveres; la escena se prepara
-    desde las 20:00 en cuanto el sector físico está cargado.
-15. Al recogerla se activa una alarma de 35 segundos y cinco oleadas de 40
-    zombis. Si ya provocó una alarma anticipada rompiendo más de dos cristales,
-    se prepara una segunda alarma con otros 200 zombis al salir del banco.
-16. El jugador escapa al menos 520 casillas con la bolsa.
-17. El mapa pasa a señalar el refugio establecido por la mesa.
-18. Al regresar, usa la mesa para revisar el botín.
-19. La bolsa se abre, se entregan las recompensas y termina la misión.
+4. El personaje piensa que debe revisar la radio.
+5. El rastreador muestra diez frecuencias posibles. Solo una contiene la
+   señal, y se repite cada media hora del juego.
+6. Al escuchar el mensaje completo aparece una pista en el mapa (uno de 21
+   puntos de reunión posibles).
+7. El jugador llega al punto, recoge una nota cifrada y debe LEERLA con la
+   acción vanilla del juego (recogerla no alcanza).
+8. Al terminar la lectura, la nota revela el Knox Bank de Louisville.
+9. El jugador reconoce el banco sin entrar (acercarse entre 35 y 90 casillas).
+10. Espera la ventana nocturna (20:00–05:00). Antes de esa hora, el perímetro
+    completo del banco está protegido (puertas y ventanas bloqueadas).
+11. Al abrirse la ventana nocturna puede entrar. Encuentra una bolsa sellada
+    junto a dos cadáveres.
+12. Al recogerla se activa una alarma de 35 segundos y cinco oleadas de 40
+    zombis (200 en total). Romper más de dos cristales antes de tiempo
+    dispara una alarma anticipada equivalente.
+13. El jugador escapa al menos 520 casillas con la bolsa.
+14. Al volver a la mesa, la revisa: se abre, entrega las recompensas y
+    termina la misión.
 
 ======================================================================
 3. RECOMPENSA
 ======================================================================
 
-La bolsa permanece sellada durante la huida. No se puede consultar ni usar como
-contenedor hasta regresar a la mesa de planificación.
+La bolsa permanece sellada durante la huida; no se puede abrir ni usar como
+contenedor hasta revisarla en la mesa. Al revisarla se transforma en una
+bolsa negra de 28 de capacidad y entrega:
 
-Al revisar el botín se transforma en una bolsa negra de 28 unidades de
-capacidad y contiene:
+- 5 lingotes pequeños de oro, 4 diamantes, 6 fajos de dinero.
+- Antibióticos, analgésicos, agujas de sutura, vendas, toallitas con alcohol.
+- Pilas, cinta adhesiva, pegamento para madera, un bidón de gasolina lleno.
+- Un walkie-talkie militar, comida enlatada.
+- Tres cajas de munición elegidas al azar entre seis tipos posibles.
+- Dos niveles de Destreza (Nimble), sin superar el nivel máximo 10.
 
-- 5 lingotes pequeños de oro.
-- 4 diamantes.
-- 6 fajos de dinero.
-- Antibióticos, analgésicos y agujas de sutura.
-- Vendas y toallitas con alcohol.
-- Pilas, cinta adhesiva y pegamento para madera.
-- Un bidón lleno de gasolina.
-- Un walkie-talkie militar.
-- Comida enlatada.
-- Tres cajas de munición elegidas aleatoriamente.
-
-El personaje recibe además dos niveles de Destreza (Nimble), sin superar el
-nivel máximo 10. Todas las recompensas tienen protección persistente contra
-duplicación.
+Cada recompensa se registra individualmente en los datos del jugador antes de
+entregarse (`data.completionRewardItems`), así que revisar el botín dos veces
+nunca duplica nada.
 
 ======================================================================
 4. RADIO E INMERSIÓN
 ======================================================================
 
-La frecuencia real se elige dinámicamente en el rango FM permitido. Antes de
-registrarla se consultan canales vanilla y canales declarados por otros mods.
-Si existe una colisión, se elige otra frecuencia disponible.
+La frecuencia real se elige dinámicamente en el rango FM permitido (88.0 a
+108.0 MHz, pasos de 0.2). Antes de registrarla se consultan canales vanilla y
+canales declarados por otros mods; si hay colisión, se elige otra frecuencia
+libre.
 
-La interfaz nunca muestra directamente la frecuencia correcta. Presenta diez
-opciones válidas y libres; el jugador debe probarlas. La transmisión se repite
-cada media hora para evitar esperas excesivas y el interlocutor insiste como si
-intentara comunicarse con otra persona, terminando con “¿Me copiaste?”.
-
-El progreso solo avanza después de recibir la última línea de la conversación.
-La reacción del personaje aparece cinco segundos después y permanece ocho
-segundos en pantalla.
+La interfaz nunca muestra directamente la frecuencia correcta (salvo con el
+flag de depuración activo). Presenta diez opciones válidas y libres; el
+jugador debe probarlas. La transmisión se repite cada media hora y el
+interlocutor insiste hasta terminar con "¿Me copiaste?". El progreso solo
+avanza al recibir esa línea final. La reacción del personaje aparece cinco
+segundos después.
 
 ======================================================================
 5. INTERFAZ
 ======================================================================
 
-La tecla J muestra u oculta el rastreador. Su posición se guarda en los datos
-del personaje. Puede arrastrarse desde la barra superior; el botón de cierre no
-inicia el arrastre y soltar el ratón fuera del panel cancela correctamente la
-captura.
+Desde la v1.1.0, el rastreador (tecla J) se presenta como un libro abierto de
+dos páginas en vez del panel plano de versiones anteriores:
 
-Código visual actual:
+- Tapa de cuero oscura arriba, con el título y el botón de cierre. Arrastrar
+  desde esa franja mueve el panel; soltar dentro o fuera cierra la captura
+  correctamente.
+- Mientras el jugador está en la fase de preparación (sin capítulos que
+  mostrar todavía), el libro ocupa una sola página a todo el ancho con la
+  barra de progreso y la lista de requisitos.
+- Una vez comienza la historia narrativa, el libro se abre en dos páginas:
+  - Izquierda: índice de 7 capítulos narrativos (agrupan las 13 etapas
+    internas). Cada capítulo se marca como completado (+), actual (>) o
+    bloqueado (atenuado, sin marcador).
+  - Derecha: contenido en vivo del capítulo actual (distancias, frecuencias,
+    contador de oleadas, etc.).
+- Los capítulos ya completados son clicables: al hacer clic, la página
+  derecha muestra una recapitulación breve de ese capítulo en vez del
+  contenido en vivo. Cambiar de etapa (avanzar en la historia) vuelve a
+  mostrar automáticamente el contenido en vivo del capítulo actual.
 
-- Azul: títulos, propósito y pensamientos del personaje.
-- Dorado: pistas, destinos y elementos importantes.
-- Verde: requisitos cumplidos y resultados positivos.
-- Rojo: alarma, peligro o requisito perdido.
-- Gris: instrucciones secundarias.
-
-La interfaz actual es funcional, pero está prevista una reconstrucción visual
-posterior. La versión 0.7.0 prioriza estabilidad y legibilidad.
+Código de color (tinta sobre pergamino, ya no HUD oscuro):
+- Marrón oscuro: títulos y texto de cuerpo.
+- Rojo oscuro: capítulo actual, alertas y elementos urgentes.
+- Verde oscuro: requisitos cumplidos y capítulos completados.
+- Gris apagado: capítulos bloqueados y texto secundario.
 
 ======================================================================
 6. PERSISTENCIA Y COMPATIBILIDAD
 ======================================================================
 
-El progreso se guarda en player:getModData() bajo la clave “LastPurpose”. La
-frecuencia, las opciones de radio y el golpe seleccionado se guardan en los
-datos globales del mundo.
+El progreso se guarda en player:getModData() bajo la clave "LastPurpose".
+`data.stage` es un STRING (por ejemplo "bank_scouted"), no un número: ver
+sección 12.2. El esquema actual es 1 y es exclusivo de esta reescritura; no
+hay migración desde partidas de las versiones 0.1.x–0.7.x.
 
-El esquema actual es 7. Las partidas antiguas que ya habían descubierto el
-banco mantienen el recorrido directo de 0.6.x. Las partidas nuevas utilizan el
-recorrido ampliado de 0.7.0. No se modifican ni eliminan partidas guardadas.
-
-La versión principal sigue siendo Project Zomboid Build 42 estable. El mod no
-depende obligatoriamente de otros mods.
+La frecuencia de radio, las diez candidatas y el golpe seleccionado se
+guardan en los datos globales del mundo (`getGameTime():getModData()`), no en
+los del jugador.
 
 ======================================================================
 7. ESTRUCTURA PRINCIPAL
 ======================================================================
 
-42/mod.info
-  Metadatos específicos de Build 42 y registro del paquete de tiles.
-
-42/media/lua/client/LastPurpose/LP_Config.lua
-  Versión, tiempo de activación, tecla y catálogo de requisitos.
-
-LP_State.lua
-  Detección del Ladrón, creación y migración de datos persistentes.
-
-LP_BurglarStory.lua
-  Activación del prólogo y escaneo del equipo necesario.
-
-LP_Thought.lua
-  Pensamientos flotantes azules de ocho segundos.
-
-LP_RadioStory.lua
-  Opciones de frecuencia, detección del mensaje y reacción del personaje.
-
-LP_HeistStory.lua
-  Selección del golpe, marcadores del mapa y compatibilidad con el flujo viejo.
-
-LP_Investigation.lua
-  Selección de pista, lectura vanilla de la nota, reconocimiento y noche.
-
-LP_BankSecurity.lua
-  Perímetro protegido del banco, apertura nocturna y alarma anticipada.
-
-LP_HeistLoot.lua
-  Escena del banco, bolsa sellada y detección de recogida.
-
-LP_HeistEscape.lua
-  Alarma, ruido, oleadas y control del asalto.
-
-LP_SafehouseAnchor.lua
-  Registro de la mesa, regreso al refugio, apertura y recompensas.
-
-LP_Tracker.lua
-  Interfaz, arrastre, estados y objetivos visibles.
-
-LP_Main.lua
-  Orden de carga y registro centralizado de eventos.
-
-42/media/lua/server/LastPurpose/LP_RadioChannel.lua
-  Elección segura de frecuencia y emisiones cada media hora.
+mod.info (raíz y dentro de 42/)
+  Metadatos del mod. id=LastPurposeB42, versionMin=42.0, registro del
+  paquete de tiles.
 
 common/media/lua/shared/LastPurpose/LP_Heists.lua
-  Catálogo de golpes y datos narrativos configurables.
+  ÚNICO archivo bajo common/. Contiene config, banderas de depuración,
+  máquina de etapas, constantes de mundo y catálogo de golpes. Ver sección
+  12.1 para por qué está todo en un solo archivo a propósito.
+
+42/media/lua/client/LastPurpose/
+  LP_State.lua        Detección del Ladrón y acceso a los datos persistentes.
+  LP_Thought.lua       Pensamientos flotantes azules de ocho segundos.
+  LP_BurglarStory.lua   Activación del prólogo y escaneo del equipo necesario.
+  LP_RadioStory.lua      Detección del mensaje de radio y reacción del personaje.
+  LP_HeistStory.lua       Marcador dinámico en el mapa del mundo.
+  LP_Investigation.lua     Pista, lectura vanilla de la nota, reconocimiento.
+  LP_BankSecurity.lua       Perímetro protegido del banco y alarma anticipada.
+  LP_HeistLoot.lua           Escena del botín sellado y su recogida.
+  LP_HeistEscape.lua          Alarma de 35 segundos y las cinco oleadas.
+  LP_SafehouseAnchor.lua       Mesa, refugio, huida, regreso y recompensa.
+  LP_Tracker.lua                Interfaz de libro descrita en la sección 5.
+  LP_Main.lua                    Orden de carga y registro de eventos.
+
+42/media/lua/server/LastPurpose/LP_RadioChannel.lua
+  Elección segura de frecuencia y emisiones cada media hora, con las
+  llamadas a la API del motor protegidas con pcall.
 
 common/media/scripts/
-  Definiciones de la mesa, la nota y las bolsas del golpe.
+  Definiciones de la mesa, la nota y las bolsas del golpe (sin cambios
+  respecto a la versión original).
 
 ======================================================================
 8. OPTIMIZACIÓN
 ======================================================================
 
-Las tareas de progresión, mesa, investigación, botín y mapa se ejecutan una vez
-por minuto del juego. El marcador solo se dibuja cuando el mapa está abierto.
-
-La lógica rápida de la emboscada permanece dormida hasta recoger el botín y se
-desactiva al terminar las cinco oleadas. Solamente el temporizador visual de los
-pensamientos conserva una comprobación ligera por fotograma.
-
-La búsqueda de objetos y mesas evita ciclos mediante tablas de elementos ya
-visitados. La escena narrativa y las recompensas utilizan versiones y banderas
-persistentes para no generarse repetidamente.
+Las tareas de progreso, radio, mapa, investigación, seguridad del banco y
+mesa corren una vez por minuto del juego (`EveryOneMinute`). Solo cuatro
+tareas usan `OnTick` (por fotograma), y cada una se duerme sola fuera de su
+etapa: reacción de radio pendiente, alarma activa, protección cercana del
+banco, y detección inmediata de la bolsa dentro de un radio de 80 casillas.
 
 ======================================================================
 9. VALIDACIÓN
 ======================================================================
 
-El recorrido ampliado fue completado de principio a fin en una partida de
-prueba. console.txt confirmó todos los hitos, las cinco oleadas, los 200 zombis,
-la huida, el regreso y la recompensa. No se encontraron excepciones de Lua
-atribuibles a Last Purpose.
+El recorrido completo fue jugado de principio a fin por ElKeyaru sobre la
+v1.0.1, confirmando: preparación, radio, pista, nota, reconocimiento,
+apertura nocturna, robo, huida, regreso y recompensa, sin excepciones de Lua
+atribuibles al mod.
 
-Los avisos de creación de zombis mostrados por Build 42 son mensajes internos
-del motor y no fallos del mod. Otros errores observados en el registro proceden
-del juego base, mapas u otros mods.
-
-Los cambios posteriores (21 pistas, lectura obligatoria, retirada del paso de estacionamiento,
-seguridad rectangular y segunda emboscada) pasan comprobaciones estáticas, pero
-requieren completar nuevamente el recorrido en el juego antes de otra release.
+Durante la primera prueba de la v1.0.0 (antes del hotfix 1.0.1) se encontró
+un bug real de orden de carga: varios archivos leían `LastPurpose.World.*` a
+nivel de archivo (fuera de cualquier función), asumiendo que el archivo
+compartido que define esa tabla ya habría cargado. Project Zomboid carga cada
+.lua de forma independiente y alfabética, y `require()` no fuerza la carga de
+un archivo al que todavía no le tocaba turno. El fix (v1.0.1): se consolidó
+toda la configuración compartida en un único archivo sin dependencias
+internas (`LP_Heists.lua`), y toda lectura de esa configuración en los demás
+archivos se movió a dentro de funciones, nunca a nivel de archivo. Ver el
+changelog para el detalle.
 
 ======================================================================
 10. DIRECCIÓN FUTURA
 ======================================================================
 
-- Rediseñar visualmente el rastreador sin cambiar su lógica persistente.
-- Añadir varios golpes posibles: banco, exposición de arte, concesionario y
-  penthouse, seleccionando uno por partida.
-- Permitir historias posteriores de Leñador, Veterano, Mecánico, Médico y
-  Desempleado.
-- Mantener opcionales las integraciones con This Is Your Life, Expanded
-  Helicopter Events y More Traits.
-- Añadir eventos de año uno y contenido repetible de post-endgame.
+Decidido en conversación con ElKeyaru (7 de septiembre de 2026), en este
+orden de prioridad:
+
+1. Seguir puliendo y validando "El último golpe" antes de sumar alcance
+   nuevo — es la única historia jugada de punta a punta con esta
+   arquitectura.
+2. Convertir la mesa de planificación en una mesa con ordenador: al
+   interactuar, abre una GUI de pantalla completa que funciona como hub de
+   misiones para TODAS las profesiones (no solo Ladrón), con requisitos de
+   desbloqueo configurables por misión. Pendiente de definir: qué tipo de
+   requisito (días sobrevividos, profesión, misión previa completada, ítem
+   específico).
+3. Agregar 4 golpes nuevos en Louisville (banco ya existe; posibles
+   candidatos: galería de arte, concesionario de autos, ático/penthouse),
+   ya integrados al hub en vez de sueltos.
+4. Historias de otras profesiones (Leñador, Veterano, Mecánico, Médico,
+   Desempleado), reutilizando el hub del punto 2.
+
+Limitación importante para todo lo anterior: ninguna coordenada de mundo
+nueva puede darse por verificada hasta que se confirme en una partida real.
+Las coordenadas del Knox Bank vinieron de una partida de prueba; las de
+futuros golpes deberían pasar por el mismo proceso antes de considerarse
+definitivas.
 
 ======================================================================
 11. ESTADO DE PUBLICACIÓN
 ======================================================================
 
-La versión 0.7.0 es el primer punto estable con el recorrido narrativo ampliado.
-La release pública contiene exclusivamente los archivos necesarios para que el
-mod funcione. Los recursos de desarrollo, respaldos, documentación histórica y
-paquetes de prueba no forman parte del ZIP jugable.
+La versión estable actual es 1.1.0. Incluye la reescritura completa de la
+lógica (1.0.0), el hotfix de orden de carga (1.0.1) y el rediseño de interfaz
+en libro (1.1.0). Es la primera reescritura validada en partida real de
+principio a fin.
 
 Last Purpose es un mod no oficial de Project Zomboid. Project Zomboid y sus
 recursos pertenecen a The Indie Stone.
@@ -243,243 +249,129 @@ recursos pertenecen a The Indie Stone.
 12. REFERENCIA TÉCNICA EXHAUSTIVA DEL CÓDIGO ACTUAL
 ======================================================================
 
-Esta sección describe el directorio de desarrollo actual. La etiqueta v0.7.0
-sigue siendo la referencia estable publicada. Los nombres indicados son
-contratos internos: cambiarlos exige migrar datos o actualizar consumidores.
+12.1 Por qué common/media/lua/shared solo tiene un archivo
 
-12.1 LP_Config.lua
+Project Zomboid B42 auto-carga cada archivo .lua de un mod de forma
+independiente, en orden alfabético dentro de cada carpeta, y ejecuta su
+código de nivel superior (fuera de funciones) inmediatamente al cargarlo.
+`require("ModName/Archivo")` NO fuerza la carga anticipada de un archivo al
+que todavía no le tocaba su turno: si el archivo objetivo no cargó todavía,
+el require falla silenciosamente (queda como advertencia en consola) y el
+valor que se esperaba de él queda `nil`.
 
-LastPurpose.VERSION: versión mostrada en registros y metadatos; vale “0.7.0”.
-DEBUG_FAST_ACTIVATION: activa el tiempo corto de desarrollo. En el directorio
-actual vale true para probar en 20 minutos; la etiqueta v0.7.0 lo tiene false y
-debe volver a false antes de una release. ACTIVATION_MINUTES vale 20.
-ACTIVATION_DAYS selecciona 20 minutos si DEBUG está activo y 15 días si no.
-SAVE_KEY: clave “LastPurpose” dentro de player:getModData().
-TRACKER_KEY: Keyboard.KEY_J, tecla para mostrar u ocultar la interfaz.
-OBJECTIVES: lista ordenada de requisitos y etiquetas visibles. Sus claves son
-crowbar, screwdriver, flashlight, bag, vehicle y safehouse.
-TOOL_TYPES: convierte tipos completos vanilla en las claves anteriores. Admite
-palancas, destornilladores y linternas normales, antiguas o improvisadas.
+Esto significa que un archivo compartido que a su vez depende de OTRO
+archivo compartido es frágil: el orden de carga entre ambos no está
+garantizado. La solución adoptada fue consolidar toda la configuración,
+etapas y constantes de mundo compartidas en un único archivo
+(`LP_Heists.lua`) sin ningún require interno. Los archivos de cliente y
+servidor lo requieren una sola vez cada uno.
 
-12.2 LP_State.lua
+Por la misma razón, `LP_Heists.lua` NO usa ninguna API exclusiva del
+cliente (como `Keyboard.*`): esas llamadas viven en los archivos bajo
+42/media/lua/client, donde sí está garantizado que las APIs de UI ya están
+listas.
 
-getPlayerSafe(i): obtiene getSpecificPlayer(i) o getPlayer() si no hay índice.
-isBurglar(p): detección defensiva del Ladrón. Prueba profesión, CharacterTrait,
-rasgos conocidos, lista antigua de traits y HasTrait. Los accesos variables de
-B42 se protegen con pcall para no romper la sesión.
-getData(p): crea, normaliza y devuelve player:getModData().LastPurpose.
-schema=7 identifica el formato. storyFlowVersion=2 es la ruta ampliada; al
-migrar datos anteriores, una partida que ya estaba en stage 4 o superior usa
-storyFlowVersion=1 para conservar la ruta directa de 0.6.x.
-getDaysSurvived(p): convierte getHoursSurvived() a días y nunca devuelve menos
-de cero.
+12.2 Máquina de etapas (reemplaza el `stage` numérico + `storyFlowVersion`)
 
-12.3 Estados persistentes principales
+`data.stage` es un string, uno de:
 
-active: el prólogo ya comenzó. completed: “Preparar el golpe” terminó; no
-significa que todo el robo haya terminado. stage: etapa narrativa actual.
-trackerVisible, trackerX, trackerY: visibilidad y posición de la interfaz.
-objectives: tabla booleana de requisitos. activatedAtHours y completedAtHours:
-marcas temporales de preparación. selectedHeist: ID del golpe elegido.
-radioPromptShown, radioTransmissionHeard, radioHeardAtHours: estado de radio.
-clueSiteIndex: una de las 21 pistas, persistente por partida. clueSpawned,
-cluePickedUp, clueRead, clueRecovered y clueX/Y/Z separan aparición, recogida y
-lectura completa. bankScouted: reconocimiento completado. Los campos heredados
-getawayVehiclePrepared/getawayVehicleId solo sirven a saves viejos. heistLocationReached:
-entrada nocturna validada. lootSpawned, lootTaken y lootSceneVersion: estado de
-la bolsa. ambushTriggered, ambushCompleted, ambushWavesSpawned y
-ambushZombiesSpawned: emboscada. exitAmbushPrepared y exitAmbushPending
-controlan la segunda salida si hubo alarma anticipada. bankSecurityObjectCount
-registra entradas protegidas. bankEscapeCompleted: distancia de huida.
-safehousePlaced y safehouseX/Y/Z: mesa activa. safehouseReturned: regreso.
-lootBagOpened, completionSuppliesGranted, completionNimbleLevelsGranted y
-heistCompletionRewardVersion: protecciones contra recompensas duplicadas.
+inactive, prep_started, prep_completed, radio_prompted, radio_heard,
+clue_found, note_read, bank_scouted, heist_active, loot_taken, returning,
+review_loot, completed
 
-12.4 Tabla de etapas de storyFlowVersion=2
+Definidas en orden en `LastPurpose.STAGE_ORDER`. Las funciones de comparación
+(`stageIs`, `stageAtLeast`, `stageBefore`, `stageBetween`, `setStage`) leen la
+posición de cada nombre en esa lista en vez de comparar números sueltos.
+Insertar una etapa nueva en el medio solo requiere tocar `STAGE_ORDER`; el
+resto del código se reordena solo.
 
-0: todavía inactivo. 1: preparación activa. 2: preparación terminada.
-3: buscar la transmisión. 4: viajar al punto de reunión. 5: buscar la nota.
-6: reconocer el banco desde el exterior. 7 queda reservado/obsoleto y el flujo
-actual pasa directamente a 8. 8: esperar la noche. 9: golpe iniciado y buscar
-la bolsa. 10: escapar con la
-bolsa. 11: volver al refugio. 12: revisar el botín en la mesa. 13: terminado.
+No existe una ruta heredada equivalente a `storyFlowVersion` de la v0.7.x:
+esta es una reconstrucción, no una migración de partidas guardadas.
 
-La ruta heredada storyFlowVersion=1 usa: 4 banco, 5 botín, 6 escape, 7 regreso,
-8 revisión y 9 finalización. Cualquier cambio de números debe actualizar
-Tracker, Investigation, HeistLoot, HeistEscape, SafehouseAnchor y HeistStory.
+12.3 LP_State.lua
 
-12.5 LP_BurglarStory.lua
+`getPlayerSafe(i)`, `isBurglar(p)` (con las mismas cascadas defensivas de
+detección que la v0.7.x, cada una protegida con pcall) y `getData(p)`, que
+crea/normaliza `player:getModData().LastPurpose` con esquema=1.
 
-scan(container,o,seen): recorre inventarios anidados sin ciclos. Marca las
-herramientas y cualquier contenedor equipable como mochila válida.
-vehicleReady(v): exige motor funcional, depósito existente y combustible > 0.
-hasVehicle(p): comprueba de forma segura el vehículo ocupado por el jugador.
-complete(o): exige todos los OBJECTIVES.
-updateProgress(p): activa stage 1 al alcanzar ACTIVATION_DAYS, actualiza los
-requisitos y pasa a stage 2 cuando están completos.
-onEveryOneMinute(): punto periódico que actualiza preparación, radio y llegada
-de rutas heredadas.
+12.4 LP_BurglarStory.lua
 
-12.6 Mesa y refugio — LP_SafehouseAnchor.lua
+Activa `prep_started` al alcanzar `ACTIVATION_DAYS`. Escanea el inventario
+(recursivo, sin ciclos) buscando los tipos de `LastPurpose.TOOL_TYPES` y
+verifica el vehículo ocupado. Pasa a `prep_completed` cuando los cinco
+requisitos de `LastPurpose.OBJECTIVES` están satisfechos.
 
-CUSTOM_SPRITE y CUSTOM_SPRITES reconocen las dos caras del tile propio.
-BANK_X/Y=12562/1690; ESCAPE_DISTANCE=520; RETURN_RADIUS=8;
-SEARCH_RADIUS=5; COMPLETION_REWARD_VERSION=2.
-ORIGINAL_LOOT, COMPLETION_SUPPLIES y AMMO_REWARDS describen las recompensas.
-isPlanningTable(), findTable() y findNearbyTable() localizan la mesa sin
-confundirla con muebles vanilla. ensureNativeVisual() migra mesas antiguas al
-sprite nativo. establishSafehouse() guarda coordenadas y completa safehouse.
-hasSafehouseAnchor() acepta temporalmente una mesa descargada del mapa, pero la
-valida cuando su casilla vuelve a estar disponible.
-openLootBag() reemplaza la bolsa sellada por el contenedor abierto y conserva
-contenido legado. addCompletionSupplies() añade objetos una vez.
-grantNimbleLevels() concede hasta dos niveles, respetando el máximo 10.
-reviewHeistLoot() exige stage 12 y la bolsa en el inventario; concede la
-recompensa y pasa a 13. fillPlanningTableWorldMenu() añade “Revisar el botín”.
-updateSafehouseAnchor() registra/migra mesas y controla huida, regreso y final.
+12.5 LP_RadioStory.lua / LP_RadioChannel.lua (servidor)
 
-12.7 Investigación — LP_Investigation.lua
+El servidor elige la frecuencia, arma las diez candidatas y emite la
+transmisión cada media hora, con cada llamada a la API del motor
+(`DynamicRadioChannel.new`, `RadioBroadCast.new`, etc.) envuelta en pcall: si
+el motor cambia una firma, el mod se queda sin canal narrativo en vez de
+romper la carga completa de radio. El cliente detecta la línea final del
+diálogo (`onDeviceText`) y avanza a `radio_heard`.
 
-NOTE_TYPE=LastPurpose.KnoxMeetingNote. findInventoryItem() recorre contenedores
-sin ciclos y devuelve el objeto. findClueNote() expone la búsqueda al tracker.
-hasReadClueNote() compara NumberOfPages con el registro de páginas leído por el
-personaje y por el objeto, usando pcall para B42. spawnClue() crea nota y escena.
-updateInvestigation() no avanza stage 5 por recogerla: exige terminar la acción
-vanilla de lectura. Después reconoce el banco entre 35 y 90 casillas, pasa
-directamente a stage 8 y permite entrar de 20:00 a 05:00.
-vehicleReady() permanece como función local heredada sin llamadas después de
-retirar el estacionamiento; puede eliminarse en una limpieza posterior sin
-cambiar partidas ni comportamiento.
+12.6 LP_HeistStory.lua
 
-12.8 Catálogo — LP_Heists.lua
+Decide el objetivo del mapa según la etapa (pista, banco o refugio) y
+parchea `ISWorldMap.render` para dibujar el marcador. El parche está
+envuelto en pcall para no romper el mapa completo si el dibujado falla.
 
-HEISTS es el registro extensible. Cada entrada contiene id, title, mission,
-destination, x/y, arrivalRadius, clueSites, marker, dialogue y finalLine.
-HEIST_ORDER controla qué IDs pueden elegirse. getHeist(id) consulta el registro.
-chooseHeistId() usa ZombRand; actualmente solo existe louisville_knox_bank.
-getHeistClue() elige una de 21 coordenadas y persiste su índice. Para añadir
-golpes se debe crear otra entrada completa y añadir su ID al orden.
+12.7 LP_Investigation.lua
 
-12.9 Radio del servidor — LP_RadioChannel.lua
+Pista → nota → reconocimiento → ventana nocturna, en las etapas
+`radio_heard` → `clue_found` → `note_read` → `bank_scouted` → `heist_active`.
+La lectura de la nota exige la acción vanilla de lectura completa
+(`getAlreadyReadPages`), no solo tenerla en el inventario.
 
-UUID identifica el canal. MODDATA_KEY guarda la frecuencia. MIN_FREQUENCY,
-MAX_FREQUENCY y FREQUENCY_STEP delimitan 88.0–108.0 MHz en pasos de 0.2.
-CANDIDATES_KEY guarda las diez señales mostradas al jugador.
-getOccupiedFrequencies() combina canales registrados y definiciones pendientes
-de DynamicRadio. isValidFrequency() valida rango y paso. chooseFreeFrequency()
-busca una frecuencia sin colisión. getFrequency() reutiliza la persistida salvo
-conflicto. validCandidateList() comprueba diez valores únicos y libres.
-createCandidateList() mezcla la real con nueve señuelos.
-onLoadRadioScripts() registra “Señal desconocida”. createBroadcast() crea las
-líneas del golpe seleccionado. onEveryTenMinutes() divide la edad mundial en
-intervalos de media hora y evita duplicar una emisión dentro del mismo bloque.
+12.8 LP_BankSecurity.lua
 
-12.10 Radio del cliente — LP_RadioStory.lua
+Perímetro exacto en `LastPurpose.World.BANK_PERIMETER`. Protege puertas y
+ventanas (salud 100000, bloqueo permanente) mientras `shouldRemainProtected`
+es cierto, y libera todo al salir de esa ventana de etapas o al alejarse del
+banco. Cuenta cristales rotos por transición de estado (no por conteo
+directo en cada tick) para no inflar el contador. Reconstruye su caché de
+entradas en cada `updateBankSecurity()` porque se pierde al cargar partida.
 
-getStoryFrequency() conserva acceso interno a la frecuencia real, pero la UI no
-la utiliza. getStoryFrequencyCandidates() devuelve las diez opciones.
-updateRadioStory() pasa de preparación a stage 3. onDeviceText() solo acepta la
-línea que contiene finalLine y pasa a stage 4. updatePendingRadioReaction()
-espera cinco segundos antes de mostrar el pensamiento posterior.
+12.9 LP_HeistLoot.lua / LP_HeistEscape.lua
 
-12.11 Mapa — LP_HeistStory.lua
+La bolsa sellada se genera una sola vez (`data.lootSpawned`) y su recogida
+disloca `prepareExitAmbush()`, que arma la alarma de 35 segundos y cinco
+oleadas de 40 zombis. Si el motor falla a mitad de una oleada, se recuerda
+qué grupos ya se generaron (`data.ambushClustersProcessed`) para no
+repetirlos en el reintento. El tiempo restante de la alarma persiste
+(`data.ambushRemainingMs`) para sobrevivir a un guardado/cargado a mitad de
+la huida.
 
-getMapTarget() decide entre pista, banco y refugio según stage.
-ensureSelectedHeist() elige una sola vez y comparte el ID mediante ModData del
-mundo. tryAddHeistMapMarker() revela un área de 18 casillas y guarda el destino.
-renderHeistMapMarker() dibuja una X azul y centra el mapa una sola vez por
-destino. El parche conserva primero ISWorldMap.render original.
-updateHeistArrival() existe únicamente para partidas con flujo heredado.
+12.10 LP_SafehouseAnchor.lua
 
-12.12 Botín — LP_HeistLoot.lua
+Registra la mesa como refugio, mide la distancia de huida (520 casillas) y
+el regreso (radio 8), y entrega la recompensa una sola vez por clave
+(`data.completionRewardItems`), protegida contra duplicación aunque
+`reviewHeistLoot()` se llame más de una vez.
 
-LOOT_ID=louisville_knox_bank; BAG_TYPE=LastPurpose.SealedKnoxBankLoot;
-LOOT_X/Y/Z=12562/1690/1; SCENE_VERSION=3.
-applyBlackLootVisual() fuerza RGB 0.08 y customColor para impedir tintes
-aleatorios. markLootBag() añade metadatos identificadores. spawnCorpse() y
-spawnLootScene() crean la escena una sola vez. findHeistLootBag() busca de forma
-recursiva. updateHeistLoot() migra escenas antiguas, prepara la escena desde las
-20:00 cuando la celda está cargada y cambia al stage de escape al recogerla.
-Si existió una alarma anticipada, conserva ese hecho y deja una segunda
-emboscada pendiente para la salida.
+12.11 LP_Tracker.lua
 
-12.13 Alarma — LP_HeistEscape.lua
+Ver sección 5. Técnicamente: `LPGoalTracker` deriva de `ISPanel`. El índice
+de capítulos se recalcula en cada `prerender()` y guarda sus zonas clicables
+en `self.chapterHitboxes` para que `onMouseDown` pueda resolver clics sin
+interferir con el arrastre de la cabecera.
 
-ALARM_X/Y/Z=12562/1690/0; duración 35000 ms; 5 oleadas; 40 zombis por oleada;
-5 grupos por oleada; intervalo 750 ms; radios de aparición 30–50.
-AMBUSH_VERSION=3 fuerza una migración segura. startAlarm() reproduce HouseAlarm
-y prepara tiempos. spawnWave() reparte grupos alrededor del banco y les ordena
-avanzar al centro. stopAlarm() detiene sonido y marca final. updateHeistEscape()
-solo trabaja por fotograma durante un asalto activo. refreshHeistEscape() lo
-reactiva al cargar una partida interrumpida.
+12.12 LP_Main.lua
 
-prepareExitAmbush() limpia de forma controlada el runtime anterior. Si el
-jugador ya provocó y superó una alarma anticipada, exitAmbushPending impide
-reactivar oleadas dentro del edificio; al cruzar fuera de x=12560..12583 o
-y=1687..1737 comienza una segunda alarma completa de 200 zombis. Sin alarma
-anticipada se conserva el comportamiento normal al recoger el botín.
-
-12.14 Seguridad del banco — LP_BankSecurity.lua
-
-El perímetro explícito es x=12560..12583, y=1687..1737 y z=0..3. isEntrance()
-acepta IsoWindow, IsoDoor y variantes IsoThumpable marcadas como puerta o
-ventana. eachEntrance() inspecciona exclusivamente ese rectángulo cargado.
-protectEntrance() conserva salud original, asigna salud 100000, bloquea por
-llave/permanentemente y restaura cristales rotos. releaseEntrance() devuelve la
-salud y abre los bloqueos durante 20:00–05:00 a partir de stage 8.
-
-updateBankSecurity() corre cada minuto, informa cuántas entradas encontró y
-cuenta cristales destruidos cuando el golpe está abierto. Más de dos activa la
-alarma anticipada. enforceBankSecurity() solo corre por fotograma mientras la
-protección está activa y el jugador está a 70 casillas o menos; repara intentos
-vanilla de romper cristales sin imponer coste permanente lejos del banco.
-
-12.15 Interfaz y pensamientos
-
-LP_Thought.lua crea un panel transparente de 560x62, sigue las coordenadas del
-personaje, dibuja texto azul con sombra y lo elimina a los 8000 ms.
-LP_Tracker.lua deriva de ISPanel. Guarda arrastre, limita la posición a la
-pantalla y cancela la captura al soltar dentro o fuera. prerender() decide el
-contenido por stage; usa dos columnas para las diez frecuencias. ensureTracker()
-crea un único panel de 345x225. onKeyPressed() implementa J.
-
-12.16 LP_Main.lua y frecuencia de ejecución
-
-Los require están ordenados por dependencias. OnCreatePlayer crea el tracker;
-OnKeyPressed controla J; OnDeviceText escucha radio; el menú contextual sirve
-para revisar botín. Reacción, alarma activa y enforcement cercano del banco
-usan OnTick. Preparación, mapa, botín, investigación, seguridad completa, mesa
-y reactivación de alarma usan EveryOneMinute.
-
-12.17 Definiciones de objetos
-
-LastPurpose_PlanningTable.txt define SafehousePlanningTableV2 y su receta:
-1 tabla, 1 libro, 2 periódicos y 1 objeto con tag glue o tape.
-LastPurpose_Clue.txt define KnoxMeetingNote como literatura vanilla de una
-página, tipo visual photo y lectura rápida.
-LastPurpose_HeistLoot.txt define una bolsa sellada normal de peso 12 y una bolsa
-abierta equipable, capacidad 28 y reducción de peso 65.
-Los JSON EN/ES aportan nombres de objetos, muebles y recetas.
-
-12.18 Tiles y recursos
-
-lastpurpose_planning_01.tiles y .tiles.txt describen propiedades, caras y
-offsets. El ID tiledef es 503. El pack contiene las caras sur y este; el motor
-deriva las rotaciones opuestas. Item_LastPurpose_PlanningTable.png es el icono.
-Ambos mod.info usan id=LastPurposeB42, versionMin=42.0 y registran pack/tiledef.
+Requiere `LP_Heists` una sola vez y todos los archivos de cliente. Registra
+los eventos descritos en la sección 8. `LastPurpose.eventsRegistered` evita
+un doble registro si el archivo se volviera a ejecutar.
 
 ======================================================================
-13. ESTADO ACTUAL Y PRÓXIMA VALIDACIÓN
+13. HISTORIAL RELEVANTE (ver CHANGELOG.md para el detalle completo)
 ======================================================================
 
-El código de desarrollo incluye 21 ubicaciones, lectura vanilla obligatoria,
-flujo sin estacionamiento, escena nocturna, protección rectangular y doble
-emboscada condicional. Debe probarse desde una partida nueva: pista aleatoria,
-lectura, reconocimiento, bloqueo diurno de todas las fachadas, apertura a las
-20:00, alarma anticipada tras más de dos cristales, recogida, segunda emboscada
-al cruzar el perímetro, huida de 520 casillas, regreso y recompensa única.
-
-Antes de publicar se debe revisar console.txt, confirmar el conteo de entradas
-protegidas y actualizar VERSION, mod.info, changelog, ZIP y etiqueta. Para
-recuperar lo estable se usa la etiqueta v0.7.0; nunca se descartan a ciegas los
-cambios del directorio de trabajo.
+0.1.x – 0.7.2   Desarrollo original (ElKeyaru + ChatGPT). Base narrativa y
+                de contenido que esta reescritura conserva.
+1.0.0           Reescritura completa del código Lua desde cero, misma
+                narrativa y contenido, arquitectura nueva (etapas con
+                nombre, config centralizada).
+1.0.1           Hotfix: bug de orden de carga (ver sección 9 y 12.1).
+                Primera versión jugada de punta a punta sin errores.
+1.1.0           Rediseño de interfaz: rastreador como libro de dos páginas
+                con índice de capítulos navegable.

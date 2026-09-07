@@ -3,13 +3,17 @@ require "ISUI/ISPanel"
 LastPurpose = LastPurpose or {}
 LastPurposeThought = ISPanel:derive("LastPurposeThought")
 
+local THOUGHT_DURATION_MS = 8000
+local THOUGHT_WIDTH, THOUGHT_HEIGHT = 560, 62
+local THOUGHT_VERTICAL_OFFSET = 150
+
 function LastPurposeThought:new(player, lines, durationMs)
-    local panel = ISPanel.new(self, 0, 0, 560, 62)
+    local panel = ISPanel.new(self, 0, 0, THOUGHT_WIDTH, THOUGHT_HEIGHT)
     panel.player = player
     panel.lines = lines
     panel.expiresAt = getTimestampMs() + durationMs
-    panel.backgroundColor = { r=0, g=0, b=0, a=0 }
-    panel.borderColor = { r=0, g=0, b=0, a=0 }
+    panel.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    panel.borderColor = { r = 0, g = 0, b = 0, a = 0 }
     panel.moveWithMouse = false
     return panel
 end
@@ -23,7 +27,7 @@ function LastPurposeThought:prerender()
     local screenX = isoToScreenX(0, self.player:getX(), self.player:getY(), self.player:getZ())
     local screenY = isoToScreenY(0, self.player:getX(), self.player:getY(), self.player:getZ())
     self:setX(math.max(10, math.min(screenX - self.width / 2, getCore():getScreenWidth() - self.width - 10)))
-    self:setY(math.max(10, screenY - 150))
+    self:setY(math.max(10, screenY - THOUGHT_VERTICAL_OFFSET))
     ISPanel.prerender(self)
 end
 
@@ -37,8 +41,9 @@ function LastPurposeThought:render()
 end
 
 function LastPurpose.showThought(player, lines)
+    if not player or not lines then return end
     if LastPurpose.thoughtPanel then LastPurpose.thoughtPanel:removeFromUIManager() end
-    local panel = LastPurposeThought:new(player, lines, 8000)
+    local panel = LastPurposeThought:new(player, lines, THOUGHT_DURATION_MS)
     panel:initialise()
     panel:addToUIManager()
     LastPurpose.thoughtPanel = panel
