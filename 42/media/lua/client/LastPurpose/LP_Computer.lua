@@ -270,6 +270,17 @@ end
 
 function LPComputer:prerender()
     ISPanel.prerender(self)
+    -- Un fallo de dibujo se lanzaria en cada fotograma: se atrapa, se
+    -- reporta una sola vez y se deja de intentar en vez de spamear consola.
+    if self.renderBroken then return end
+    local ok, err = pcall(function() self:paint() end)
+    if not ok then
+        self.renderBroken = true
+        print("[LastPurpose] ERROR pintando el ordenador (se detiene el dibujo): " .. tostring(err))
+    end
+end
+
+function LPComputer:paint()
     if not self.win then self:layout() end
     local win = self.win
 
@@ -324,7 +335,7 @@ function LPComputer:renderRail()
         local active = self.app == app.id
         if active then bevel(self, 4, ry, RAIL_W - 8, 52, { 0.12, 0.30, 0.27 }) end
         local c = active and { 0.92, 1.0, 0.97 } or { 0.72, 0.78, 0.75 }
-        appGlyph(self, 33, ry + 8, c)
+        appGlyph(self, app.id, 33, ry + 8, c)
         local lw = getTextManager():MeasureStringX(UIFont.Small, app.label)
         text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 34, c)
         table.insert(self.appHitboxes, { id = app.id, x = 4, y = ry, w = RAIL_W - 8, h = 52 })
