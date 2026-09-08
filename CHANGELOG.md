@@ -16,7 +16,11 @@ referencia histórica.
   y, en la etapa `review_loot`, su botón «Entregar botín» llama al mismo
   `LastPurpose.reviewHeistLoot` de siempre. La opción directa «Revisar el
   botín» del menú se conserva mientras se prueba el botón de la GUI en juego.
-  Se cierra con Escape, el botón X o un clic fuera de la ventana.
+  Se cierra con Escape, el botón X o un clic fuera de la ventana. La GUI
+  reproduce la estructura del mockup (escritorio con barra lateral
+  Misiones/Notas/Archivos/Sistema, franja de colores, ventana con relieve
+  noventero, barra de estado) con las primitivas de ISUI; iconos, logo,
+  marco CRT y fuente pixel quedan como assets PNG pendientes.
 - **Receta de la mesa** cambiada a `2 tablones + 3 chatarra electrónica +
   1 pegamento/cinta` (antes libro + periódicos). El nombre del mueble no
   cambia: sigue siendo «Mesa de planificación».
