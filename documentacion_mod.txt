@@ -385,7 +385,22 @@ de capítulos se recalcula en cada `prerender()` y guarda sus zonas clicables
 en `self.chapterHitboxes` para que `onMouseDown` pueda resolver clics sin
 interferir con el arrastre de la cabecera.
 
-12.12 LP_Main.lua
+12.12 LP_Computer.lua
+
+Hito 1 del hub del ordenador (roadmap punto 2). La mesa de planificación es
+ahora «la mesa con ordenador»: mismo mueble, misma pieza, pero la receta pide
+chatarra electrónica en vez de libro + periódicos, y el menú contextual
+(`fillPlanningTableWorldMenu` en `LP_SafehouseAnchor.lua`) abre `LPComputer`,
+un `ISPanel` de pantalla completa estilo terminal. Es de SOLO LECTURA: dibuja
+el catálogo por ciudad (`CATALOG` local; solo `louisville_knox_bank` está
+desbloqueado, el resto sale como `?????????`) y un panel de detalle. Su único
+botón funcional, en la etapa `review_loot`, llama a
+`LastPurpose.reviewHeistLoot()` — no reescribe nada de ese flujo. La opción
+directa «Revisar el botín» del menú se mantiene en paralelo mientras se
+valida el botón en juego. La selección de misión y los desbloqueos por
+ciudad/profesión son hitos 2-5, todavía sin implementar.
+
+12.13 LP_Main.lua
 
 Requiere `LP_Heists` una sola vez y todos los archivos de cliente. Registra
 los eventos descritos en la sección 8. `LastPurpose.eventsRegistered` evita

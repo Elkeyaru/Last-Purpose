@@ -233,17 +233,27 @@ function LastPurpose.fillPlanningTableWorldMenu(playerIndex, context, worldObjec
     local player = LastPurpose.getPlayerSafe(playerIndex)
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
-    if not LastPurpose.stageIs(data, "review_loot") then return end
 
+    local tableHere = nil
     for _, object in ipairs(worldObjects or {}) do
-        local square = object and object:getSquare()
-        if isPlanningTable(object) and square
-            and square:getX() == data.safehouseX
-            and square:getY() == data.safehouseY
-            and square:getZ() == data.safehouseZ then
-            context:addOption("Revisar el botin", player, LastPurpose.reviewHeistLoot)
-            return
-        end
+        if isPlanningTable(object) then tableHere = object end
+    end
+    if not tableHere then return end
+
+    -- La mesa con ordenador: la GUI de pantalla completa (hito 1, solo lectura).
+    if LastPurpose.openComputer then
+        context:addOption("Usar el ordenador", player, LastPurpose.openComputer)
+    end
+
+    -- Entrega del botin: sigue siendo el mismo flujo validado. Se conserva la
+    -- opcion directa del menu mientras el boton de la GUI se prueba en juego;
+    -- ambos llaman a la misma funcion.
+    local square = tableHere:getSquare()
+    if LastPurpose.stageIs(data, "review_loot") and square
+        and square:getX() == data.safehouseX
+        and square:getY() == data.safehouseY
+        and square:getZ() == data.safehouseZ then
+        context:addOption("Revisar el botin", player, LastPurpose.reviewHeistLoot)
     end
 end
 

@@ -10,6 +10,7 @@ require "LastPurpose/LP_BankSecurity"
 require "LastPurpose/LP_HeistLoot"
 require "LastPurpose/LP_HeistEscape"
 require "LastPurpose/LP_SafehouseAnchor"
+require "LastPurpose/LP_Computer"
 require "LastPurpose/LP_Tracker"
 
 if not LastPurpose.eventsRegistered then

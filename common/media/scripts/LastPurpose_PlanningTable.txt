@@ -22,9 +22,8 @@ module LastPurpose
         category = Carpentry,
         inputs
         {
-            item 1 [Base.Plank],
-            item 1 [Base.Book],
-            item 2 [Base.Newspaper;Base.Newspaper_Recent;Base.Newspaper_New;Base.Newspaper_Dispatch_New;Base.Newspaper_Herald_New;Base.Newspaper_Knews_New;Base.Newspaper_Times_New],
+            item 2 [Base.Plank],
+            item 3 [Base.ElectronicsScrap],
             item 1 tags[base:glue;base:tape],
         }
         outputs

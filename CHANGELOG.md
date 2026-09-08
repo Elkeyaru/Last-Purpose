@@ -8,6 +8,19 @@ referencia histórica.
 ## Sin publicar
 
 ### Añadido
+- **Hub del ordenador — hito 1 (`LP_Computer.lua`, nuevo).** La mesa de
+  planificación gana una opción de menú «Usar el ordenador» que abre una GUI
+  de pantalla completa estilo terminal retro (archivo de misiones). Por ahora
+  es de solo lectura: lista el catálogo por ciudad (solo «El último golpe»
+  visible; el resto censurado como `?????????` hasta los hitos de desbloqueo)
+  y, en la etapa `review_loot`, su botón «Entregar botín» llama al mismo
+  `LastPurpose.reviewHeistLoot` de siempre. La opción directa «Revisar el
+  botín» del menú se conserva mientras se prueba el botón de la GUI en juego.
+  Se cierra con Escape, el botón X o un clic fuera de la ventana.
+- **Receta de la mesa** cambiada a `2 tablones + 3 chatarra electrónica +
+  1 pegamento/cinta` (antes libro + periódicos). El nombre del mueble no
+  cambia: sigue siendo «Mesa de planificación».
+
 - **Panel de opciones del mod** (Opciones → Mods → Last Purpose), con la API
   nativa `PZAPI.ModOptions` de B42, sin dependencias. Dos ajustes: la tecla
   para abrir/cerrar el diario (antes fija en `J`) y una casilla de registro
