@@ -68,6 +68,26 @@ local STRIPE    = { {0.38,0.72,0.35}, {0.24,0.62,0.55}, {0.90,0.63,0.13}, {0.82,
 
 local RAIL_W = 96
 
+-- Texturas (assets/Gemini procesados). Cada una tiene fallback dibujado, asi
+-- que si un PNG falta o no carga la GUI sigue funcionando, solo mas pelada.
+local TEX_DIR = "media/ui/LastPurpose/"
+local texCache = {}
+local function tex(name)
+    if texCache[name] == nil then
+        local ok, t = pcall(getTexture, TEX_DIR .. name)
+        texCache[name] = (ok and t) or false
+    end
+    return texCache[name] or nil
+end
+local function icon(n) return tex(string.format("lp_icon_%02d.png", n)) end
+
+local IC = {
+    misiones = 0, notas = 1, archivos = 2, sistema = 3, folder = 4,
+    compass = 5, crosshair = 6, finger = 7,
+    cash = 8, gold = 9, crate = 10, art = 11, watch = 12, car = 13,
+    min = 14, max = 15, close = 16,
+}
+
 LPComputer = ISPanel:derive("LPComputer")
 
 function LPComputer:new()
@@ -136,23 +156,20 @@ local function drawWrapped(self, str, x, y, w, c, font)
     return y
 end
 
--- glyphs de la barra lateral, dibujados con rectangulos (los iconos "de
--- verdad" son un PNG pendiente).
-local function appGlyph(self, id, x, y, c)
-    local col = { r = c[1], g = c[2], b = c[3], a = 1 }
-    self:drawRectBorder(x, y, 26, 20, 1, col.r, col.g, col.b)
-    if id == "misiones" then
-        self:drawRect(x + 10, y + 20, 6, 3, 1, col.r, col.g, col.b)
-    elseif id == "notas" then
-        self:drawRect(x + 5, y + 5, 16, 1, 1, col.r, col.g, col.b)
-        self:drawRect(x + 5, y + 9, 16, 1, 1, col.r, col.g, col.b)
-        self:drawRect(x + 5, y + 13, 11, 1, 1, col.r, col.g, col.b)
-    elseif id == "archivos" then
-        self:drawRect(x, y - 3, 12, 4, 1, col.r, col.g, col.b)
-    elseif id == "sistema" then
-        self:drawRect(x + 11, y + 3, 4, 14, 1, col.r, col.g, col.b)
-        self:drawRect(x + 6, y + 8, 14, 4, 1, col.r, col.g, col.b)
+-- Dibuja un icono de la hoja procesada, tintado con `c`. Si la textura no
+-- esta, cae a un glifo de rectangulos.
+local function drawIcon(self, n, x, y, size, c)
+    local t = icon(n)
+    if t then
+        self:drawTextureScaled(t, x, y, size, size, 1, c[1], c[2], c[3])
+        return
     end
+    self:drawRectBorder(x + 3, y + 4, size - 8, size - 10, 1, c[1], c[2], c[3])
+end
+
+local function appGlyph(self, id, x, y, c)
+    local n = IC[id]
+    if n then drawIcon(self, n, x, y - 2, 30, c) end
 end
 
 -- ---- estado de la mision --------------------------------------------------
@@ -199,6 +216,10 @@ function LPComputer:createChildren()
     self.actionButton.backgroundColor = { r = WINFACE[1], g = WINFACE[2], b = WINFACE[3], a = 1 }
     self.actionButton.borderColor = { r = 0, g = 0, b = 0, a = 1 }
     self.actionButton.textColor = { r = INK[1], g = INK[2], b = INK[3], a = 1 }
+    local finger = icon(IC.finger)
+    if finger and self.actionButton.setImage then
+        pcall(function() self.actionButton:setImage(finger) end)
+    end
     self:addChild(self.actionButton)
 
     self:refreshAction()
@@ -287,21 +308,37 @@ function LPComputer:paint()
     rect(self, 0, 0, self.width, self.statusY, DESKTOP)
     self:renderRail()
 
-    -- marca de agua XCYOS en el escritorio
-    text(self, "XCYOS", win.x + win.w + 26, math.floor(self.height / 2) - 30, { PH_DIM[1], PH_DIM[2], PH_DIM[3] }, UIFont.Large)
-    text(self, "para un proposito aun", win.x + win.w + 26, math.floor(self.height / 2) + 2, LOCKC, UIFont.Small)
+    -- marca de agua del escritorio: el logo si esta, si no el texto
+    local logo = tex("xcyos_logo.png")
+    if logo then
+        local lw = 300
+        local lh = lw * logo:getHeight() / logo:getWidth()
+        self:drawTextureScaled(logo, win.x + win.w + 24, math.floor(self.height / 2 - lh / 2), lw, lh, 0.42, 1, 1, 1)
+    else
+        text(self, "XCYOS", win.x + win.w + 26, math.floor(self.height / 2) - 30, { PH_DIM[1], PH_DIM[2], PH_DIM[3] }, UIFont.Large)
+        text(self, "para un proposito aun", win.x + win.w + 26, math.floor(self.height / 2) + 2, LOCKC, UIFont.Small)
+    end
 
     -- ventana
     bevel(self, win.x, win.y, win.w, win.h, WINFACE)
     self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0, 0, 0)
-    rect(self, win.x + 1, win.y + 1, win.w - 2, 24, TITLE_BG)
-    rect(self, win.x + 8, win.y + 8, 12, 10, { 0.86, 0.74, 0.34 })  -- glifo carpeta
-    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 26, win.y + 6, { 0.90, 1.0, 0.96 })
-    text(self, "_  []", win.x + win.w - 66, win.y + 6, { 0.80, 0.86, 0.83 })  -- botones inertes; la X es un hijo
+    local gt = tex("grad_title.png")
+    if gt then
+        self:drawTextureScaled(gt, win.x + 1, win.y + 1, win.w - 2, 24, 1, 1, 1, 1)
+    else
+        rect(self, win.x + 1, win.y + 1, win.w - 2, 24, TITLE_BG)
+    end
+    drawIcon(self, IC.folder, win.x + 6, win.y + 3, 20, { 0.90, 0.78, 0.40 })
+    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.90, 1.0, 0.96 })
+    drawIcon(self, IC.min, win.x + win.w - 68, win.y + 3, 18, { 0.82, 0.88, 0.85 })
+    drawIcon(self, IC.max, win.x + win.w - 46, win.y + 3, 18, { 0.82, 0.88, 0.85 })
+    -- (la X es un hijo ISButton)
 
-    -- lineas de escaneo sobre la ventana
-    for sy = win.y + 26, win.y + win.h - 2, 3 do
-        self:drawRect(win.x + 1, sy, win.w - 2, 1, 0.045, 0, 0, 0)
+    -- lineas de escaneo sobre la ventana (fallback si no hay overlay PNG)
+    if not tex("crt_overlay.png") then
+        for sy = win.y + 26, win.y + win.h - 2, 3 do
+            self:drawRect(win.x + 1, sy, win.w - 2, 1, 0.045, 0, 0, 0)
+        end
     end
 
     local bx, by = win.x + 14, win.y + 36
@@ -322,6 +359,10 @@ function LPComputer:paint()
     rect(self, 0, self.statusY, self.width, 24, { 0.02, 0.13, 0.11 })
     text(self, "XCYOS v1.0.3  |  LAST PURPOSE TERMINAL", 12, self.statusY + 5, PH_DIM)
     textRight(self, "12:47  .  14/07/1993", self.width - 12, self.statusY + 5, PHOSPHOR)
+
+    -- overlay CRT (viñeta + scanlines) por encima de todo
+    local ov = tex("crt_overlay.png")
+    if ov then self:drawTextureScaled(ov, 0, 0, self.width, self.statusY, 1, 1, 1, 1) end
 end
 
 function LPComputer:renderRail()
@@ -335,9 +376,9 @@ function LPComputer:renderRail()
         local active = self.app == app.id
         if active then bevel(self, 4, ry, RAIL_W - 8, 52, { 0.12, 0.30, 0.27 }) end
         local c = active and { 0.92, 1.0, 0.97 } or { 0.72, 0.78, 0.75 }
-        appGlyph(self, app.id, 33, ry + 8, c)
+        appGlyph(self, app.id, 33, ry + 6, c)
         local lw = getTextManager():MeasureStringX(UIFont.Small, app.label)
-        text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 34, c)
+        text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 37, c)
         table.insert(self.appHitboxes, { id = app.id, x = 4, y = ry, w = RAIL_W - 8, h = 52 })
         ry = ry + 58
     end
@@ -394,14 +435,17 @@ function LPComputer:renderDetail(x, y, w)
     text(self, "OBJETIVO", x, cy, INK); cy = cy + 18
     cy = drawWrapped(self, (heist and heist.mission) or "Adelantarse a la competencia.", x, cy, w, INK)
     cy = cy + 12
-    text(self, "RECOMPENSA", x, cy, INK); cy = cy + 18
-    for _, line in ipairs({
-        "Oro, diamantes y fajos de dinero.",
-        "Suministros de mid-game y municion.",
-        "2 niveles de Destreza (Nimble).",
-    }) do
-        cy = drawWrapped(self, "- " .. line, x, cy, w, INK_SOFT)
+    text(self, "RECOMPENSA", x, cy, INK); cy = cy + 20
+    local tiles = { { IC.cash, "Efectivo" }, { IC.gold, "Oro" }, { IC.crate, "Suministros" } }
+    for ti, t in ipairs(tiles) do
+        local tx = x + (ti - 1) * 92
+        self:drawRectBorder(tx, cy, 84, 58, 1, INK[1], INK[2], INK[3])
+        drawIcon(self, t[1], tx + 27, cy + 6, 30, INK)
+        local lw2 = getTextManager():MeasureStringX(UIFont.Small, t[2])
+        text(self, t[2], tx + math.floor((84 - lw2) / 2), cy + 40, INK_SOFT)
     end
+    cy = cy + 66
+    drawWrapped(self, "5 lingotes de oro, 4 diamantes, 6 fajos, suministros de mid-game, municion y 2 niveles de Destreza.", x, cy, w, INK_SOFT)
 end
 
 -- paneles de las otras apps: contenido minimo, real, de solo lectura.

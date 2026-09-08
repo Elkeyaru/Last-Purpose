@@ -19,8 +19,12 @@ referencia histórica.
   Se cierra con Escape, el botón X o un clic fuera de la ventana. La GUI
   reproduce la estructura del mockup (escritorio con barra lateral
   Misiones/Notas/Archivos/Sistema, franja de colores, ventana con relieve
-  noventero, barra de estado) con las primitivas de ISUI; iconos, logo,
-  marco CRT y fuente pixel quedan como assets PNG pendientes.
+  noventero, barra de estado).
+- **Assets del terminal** en `42/media/ui/LastPurpose/`: hoja de iconos de
+  Gemini procesada a 17 PNG transparentes (`lp_icon_00..16`), logo `xcyos_logo.png`
+  y `crt_overlay.png` + `grad_title/grad_button` generados por código.
+  `LP_Computer.lua` los carga con `getTexture` y cae al dibujo de
+  rectángulos si algún PNG falta. Falta la fuente pixel (`.fnt`).
 - **Receta de la mesa** cambiada a `2 tablones + 3 chatarra electrónica +
   1 pegamento/cinta` (antes libro + periódicos). El nombre del mueble no
   cambia: sigue siendo «Mesa de planificación».
