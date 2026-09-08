@@ -47,6 +47,66 @@ local function eachEntranceInPerimeter(callback)
     return count
 end
 
+local function recalcSquareOf(object)
+    local square = object:getSquare()
+    if not square then return end
+    pcall(function()
+        if square.RecalcProperties then square:RecalcProperties() end
+        if square.RecalcAllWithNeighbours then square:RecalcAllWithNeighbours(true) end
+    end)
+end
+
+-- Des-rompe una entrada nuestra que se haya roto pese al bloqueo. El combate
+-- directo contra el cristal y los zombis no pasan por ninguna accion Lua, asi
+-- que la unica via fiable desde el mod es revertir el estado en el siguiente
+-- tick de enforce. Solo actua sobre objetos que YA marcamos como protegidos
+-- (LastPurposeBankProtected), nunca sobre daño preexistente ajeno.
+local RESTORE_COOLDOWN_MS = 300
+
+function LastPurpose.restoreEntranceIfBroken(object)
+    local md = object:getModData()
+    if not md.LastPurposeBankProtected then return end
+
+    -- Limita la reconstruccion a ~3 por segundo por objeto: bajo pounding
+    -- continuo de zombis, un setSmashed(false)+recalc en cada tick de OnTick
+    -- puede causar parpadeo e inestabilidad de render (ver CHANGELOG 0.7.1).
+    local now = getTimestampMs()
+    if md.LastPurposeRestoredAt and now - md.LastPurposeRestoredAt < RESTORE_COOLDOWN_MS then return end
+
+    local changed = false
+
+    if instanceof(object, "IsoWindow") then
+        local ok, smashed = pcall(function() return object:isSmashed() end)
+        if ok and smashed then
+            local okGlass, glassGone = pcall(function() return object:isGlassRemoved() end)
+            if okGlass and glassGone then
+                -- El cristal ya no existe: setSmashed(false) no lo reconstruye.
+                -- Se registra una vez para no spamear.
+                if not md.LastPurposeGlassLostLogged then
+                    md.LastPurposeGlassLostLogged = true
+                    print("[LastPurpose] AVISO: un cristal protegido del banco perdio el vidrio y no se pudo restaurar")
+                end
+            else
+                pcall(function() object:setSmashed(false) end)
+                md.LastPurposeWindowWasSmashed = false
+                changed = true
+            end
+        end
+    elseif instanceof(object, "IsoThumpable") then
+        local ok, smashed = pcall(function() return object.isSmashed and object:isSmashed() end)
+        if ok and smashed then
+            pcall(function() object:setSmashed(false) end)
+            changed = true
+        end
+    end
+
+    if changed then
+        md.LastPurposeRestoredAt = now
+        pcall(function() if object.setHealth then object:setHealth(100000) end end)
+        recalcSquareOf(object)
+    end
+end
+
 local function protectEntrance(object)
     local md = object:getModData()
     -- Un cristal ya roto que no era nuestro no se "repara" al protegerlo.
@@ -61,6 +121,11 @@ local function protectEntrance(object)
     pcall(function() if object.setPermaLocked then object:setPermaLocked(true) end end)
     md.LastPurposeBankProtected = true
     knownEntrances[object] = true
+
+    -- Tras marcarlo como protegido, revertir cualquier rotura que ya haya
+    -- ocurrido (combate directo, zombis). Se llama tanto desde el tick de
+    -- enforce como desde la reconstruccion por minuto.
+    LastPurpose.restoreEntranceIfBroken(object)
 end
 
 local function releaseEntrance(object)
@@ -72,6 +137,8 @@ local function releaseEntrance(object)
     pcall(function() if object.setIsLocked then object:setIsLocked(false) end end)
     md.LastPurposeBankProtected = false
     md.LastPurposeOriginalHealth = nil
+    md.LastPurposeRestoredAt = nil
+    md.LastPurposeGlassLostLogged = nil
 end
 
 local function shouldRemainProtected(player)

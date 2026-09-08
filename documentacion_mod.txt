@@ -348,6 +348,15 @@ entrada sellada (`isProtectedBankEntrance`), la acción se rechaza antes de
 arrancar. La envoltura es idempotente (flag `LastPurposeSealGuard`) y se
 reintenta cada minuto por si el motor cargó esa clase después.
 
+El combate directo contra el cristal y los zombis no pasan por ninguna acción
+Lua, así que además `LastPurpose.restoreEntranceIfBroken()` revierte en el
+siguiente tick de enforce cualquier entrada nuestra rota mientras el sello
+está activo (`setSmashed(false)` + recalc + salud alta), con un límite de ~3
+reconstrucciones/segundo por objeto (`LastPurposeRestoredAt`) para no repetir
+el parpadeo de render de 0.7.1. Si el cristal pierde el vidrio
+(`isGlassRemoved()`) no se puede reconstruir; la protección de zona a prueba
+de todo queda para KeyasLIB.
+
 Cuenta cristales rotos por transición de estado (no por conteo
 directo en cada tick) para no inflar el contador. Reconstruye su caché de
 entradas en cada `updateBankSecurity()` porque se pierde al cargar partida.

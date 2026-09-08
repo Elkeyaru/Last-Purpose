@@ -39,6 +39,16 @@ referencia histórica.
   entrada sellada del banco, la acción se rechaza antes de arrancar, venga de
   donde venga (`LP_BankSecurity.lua`). Se añadió traza (tras `DEBUG`) del
   estado del sellado y del número de entradas protegidas para diagnóstico.
+- **Los cristales del banco se rompían igual por combate directo o por los
+  zombis** (ninguna de esas vías pasa por una acción Lua interceptable).
+  `LastPurpose.restoreEntranceIfBroken()` revierte en el siguiente tick de
+  enforce cualquier entrada nuestra que se haya roto mientras el sello está
+  activo: `setSmashed(false)` + `RecalcAllWithNeighbours` + salud alta, con un
+  límite de ~3 reconstrucciones/segundo por objeto para no provocar el
+  parpadeo de render que ya hubo en 0.7.1. No es infalible (si el cristal
+  pierde el vidrio, `isGlassRemoved()`, no se puede reconstruir; y un zombi
+  podría cruzar en el fotograma en que está roto) — la solución definitiva de
+  zona protegida irá en KeyasLIB.
 - **El rastreador (libro) cortaba las frases fuera de la página.** Project
   Zomboid no ajusta `drawText()` al ancho del contenedor y la página derecha
   del libro es la mitad de ancha que el panel anterior, así que las frases
