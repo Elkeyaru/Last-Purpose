@@ -51,22 +51,25 @@ local APPS = {
     { id = "sistema",  label = "SISTEMA" },
 }
 
--- Paleta terminal. Una sola: es una pantalla dentro del juego.
-local SCREEN    = { 0.050, 0.062, 0.056 }
-local DESKTOP   = { 0.110, 0.132, 0.122 }
-local WINFACE   = { 0.722, 0.706, 0.658 }
-local WIN_HI    = { 0.906, 0.890, 0.836 }
-local WIN_LO    = { 0.404, 0.392, 0.356 }
-local PAGEFACE  = { 0.836, 0.820, 0.760 }
-local TITLE_BG  = { 0.180, 0.235, 0.220 }
-local INK       = { 0.086, 0.086, 0.058 }
-local INK_SOFT  = { 0.300, 0.288, 0.240 }
-local PHOSPHOR  = { 0.184, 0.902, 0.772 }
-local PH_DIM    = { 0.102, 0.520, 0.462 }
-local OKC       = { 0.300, 0.640, 0.320 }
-local AMBER     = { 1.000, 0.712, 0.290 }
-local LOCKC     = { 0.486, 0.478, 0.435 }
-local STRIPE    = { {0.38,0.72,0.35}, {0.24,0.62,0.55}, {0.90,0.63,0.13}, {0.82,0.27,0.23} }
+-- Paleta terminal. Hex exactos del mockup XCYOS (una sola: es una pantalla
+-- dentro del juego, sin tema claro/oscuro).
+local SCREEN    = { 0.043, 0.059, 0.051 }   -- #0b0f0d
+local DESKTOP   = { 0.106, 0.125, 0.118 }   -- #1b201e
+local WINFACE   = { 0.725, 0.714, 0.678 }   -- #b9b6ad
+local WIN_HI    = { 0.933, 0.925, 0.894 }   -- #eeece4
+local WIN_LO    = { 0.427, 0.416, 0.380 }   -- #6d6a61
+local PAGEFACE  = { 0.796, 0.784, 0.749 }   -- #cbc8bf
+local TITLE_BG  = { 0.145, 0.184, 0.173 }   -- #25302c (base del degradado teal)
+local TITLE_INK = { 0.918, 1.000, 0.965 }   -- #eafffb
+local INK       = { 0.086, 0.086, 0.059 }   -- #16160f
+local INK_SOFT  = { 0.290, 0.278, 0.235 }   -- #4a473c
+local PHOSPHOR  = { 0.184, 0.906, 0.769 }   -- #2fe7c4
+local PH_DIM    = { 0.110, 0.561, 0.486 }   -- #1c8f7c
+local OKC       = { 0.337, 0.706, 0.353 }   -- #56b45a
+local AMBER     = { 1.000, 0.714, 0.290 }   -- #ffb64a
+local LOCKC     = { 0.486, 0.478, 0.439 }   -- #7c7a70
+local SEL_BG    = { 0.184, 0.247, 0.227 }   -- #2f3f3a fila seleccionada
+local STRIPE    = { {0.384,0.714,0.349}, {0.235,0.604,0.549}, {0.886,0.627,0.129}, {0.820,0.267,0.227} }
 
 local RAIL_W = 96
 
@@ -370,27 +373,36 @@ function LPComputer:paint()
         self:drawRect(0, sy, self.width, 1, 0.05, 0, 0, 0)
     end
 
-    -- ventana: sombra, relleno solido, borde negro
-    rect(self, win.x - 3, win.y - 3, win.w + 6, win.h + 6, { 0, 0, 0 }, 0.45)
+    -- ventana: sombra, relleno solido, bisel noventero (claro arriba/izq)
+    rect(self, win.x - 3, win.y - 3, win.w + 6, win.h + 6, { 0, 0, 0 }, 0.5)
     rect(self, win.x, win.y, win.w, win.h, WINFACE)
-    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.05, 0.05, 0.04)
-    -- barra de titulo: teal oscuro, dibujada dos veces por si algo compone encima
-    rect(self, win.x + 1, win.y + 1, win.w - 2, 25, TITLE_BG)
-    rect(self, win.x + 1, win.y + 1, win.w - 2, 25, TITLE_BG)
-    self:drawRect(win.x + 1, win.y + 26, win.w - 2, 1, 1, 0, 0, 0)
-    drawIcon(self, IC.folder, win.x + 6, win.y + 4, 18, { 0.92, 0.80, 0.42 })
-    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.60, 1.0, 0.92 })
-    drawIcon(self, IC.min, win.x + win.w - 72, win.y + 5, 16, { 0.85, 0.92, 0.89 })
-    drawIcon(self, IC.max, win.x + win.w - 50, win.y + 5, 16, { 0.85, 0.92, 0.89 })
+    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.04, 0.04, 0.03)
+    self:drawRect(win.x + 1, win.y + 1, win.w - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
+    self:drawRect(win.x + 1, win.y + 1, 1, win.h - 2, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
+
+    -- barra de titulo: degradado teal si esta el PNG, si no teal oscuro plano
+    local TB_H = 26
+    local gtitle = tex("grad_title.png")
+    if gtitle then
+        self:drawTextureScaled(gtitle, win.x + 2, win.y + 2, win.w - 4, TB_H, 1, 1, 1, 1)
+    else
+        rect(self, win.x + 2, win.y + 2, win.w - 4, TB_H, TITLE_BG)
+    end
+    self:drawRect(win.x + 2, win.y + 2 + TB_H, win.w - 4, 1, 1, 0, 0, 0)
+    drawIcon(self, IC.folder, win.x + 8, win.y + 5, 18, { 0.94, 0.82, 0.39 })
+    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 32, win.y + 7, TITLE_INK)
+    drawIcon(self, IC.min, win.x + win.w - 74, win.y + 6, 16, TITLE_INK)
+    drawIcon(self, IC.max, win.x + win.w - 52, win.y + 6, 16, TITLE_INK)
     -- (la X es un hijo ISButton)
 
-    local bx, by = win.x + 14, win.y + 36
-    local bw, bh = win.w - 28, win.h - 50
+    local bx, by = win.x + 14, win.y + 38
+    local bw, bh = win.w - 28, win.h - 52
 
     local function pane(px, py, pw, ph)
         rect(self, px, py, pw, ph, PAGEFACE)
-        self:drawRectBorder(px, py, pw, ph, 1, 0.32, 0.31, 0.28)
+        self:drawRectBorder(px, py, pw, ph, 1, WIN_LO[1], WIN_LO[2], WIN_LO[3])
         self:drawRect(px + 1, py + 1, pw - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
+        self:drawRect(px + 1, py + 1, 1, ph - 2, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
     end
 
     if self.app == "misiones" then
@@ -419,8 +431,11 @@ function LPComputer:renderRail()
     local ry = 14
     for _, app in ipairs(APPS) do
         local active = self.app == app.id
-        if active then bevel(self, 4, ry, RAIL_W - 8, 52, { 0.12, 0.30, 0.27 }) end
-        local c = active and { 0.92, 1.0, 0.97 } or { 0.72, 0.78, 0.75 }
+        if active then
+            rect(self, 4, ry, RAIL_W - 8, 52, { 0.075, 0.135, 0.125 })
+            self:drawRectBorder(4, ry, RAIL_W - 8, 52, 1, PH_DIM[1], PH_DIM[2], PH_DIM[3])
+        end
+        local c = active and { 0.918, 1.0, 0.965 } or { 0.706, 0.765, 0.737 }
         appGlyph(self, app.id, 33, ry + 6, c)
         local lw = measure(app.label, UIFont.Small)
         text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 37, c)
@@ -434,20 +449,23 @@ function LPComputer:renderList(x, y, w)
     local cy = y
     for _, group in ipairs(CATALOG) do
         text(self, group.city, x, cy, INK)
-        rect(self, x, cy + 16, w, 1, INK)
-        cy = cy + 22
+        rect(self, x, cy + 15, w, 2, INK)
+        cy = cy + 23
         if group.hint then
-            cy = drawWrapped(self, group.hint, x, cy, w, LOCKC) + 2
+            cy = drawWrapped(self, group.hint, x, cy, w, LOCKC) + 3
         end
         for i, row in ipairs(group.rows) do
             local sel = row.id == self.selectedId
-            if sel then rect(self, x - 6, cy - 2, w + 12, 18, { 0.16, 0.24, 0.23 }) end
-            local c = sel and PHOSPHOR or (row.unlocked and INK or LOCKC)
+            if sel then
+                rect(self, x - 8, cy - 3, w + 16, 19, SEL_BG)
+                rect(self, x - 8, cy - 3, 3, 19, PHOSPHOR)
+            end
+            local c = sel and TITLE_INK or (row.unlocked and INK or LOCKC)
             text(self, i .. ". " .. (row.unlocked and row.name or REDACTED), x, cy, c)
-            table.insert(self.rowHitboxes, { id = row.id, x = x - 6, y = cy - 2, w = w + 12, h = 18 })
-            cy = cy + 19
+            table.insert(self.rowHitboxes, { id = row.id, x = x - 8, y = cy - 3, w = w + 16, h = 19 })
+            cy = cy + 20
         end
-        cy = cy + 10
+        cy = cy + 11
     end
 end
 
@@ -471,8 +489,11 @@ function LPComputer:renderDetail(x, y, w)
     local label, color = "DISPONIBLE", PH_DIM
     if data then label, color = knoxStatus(data) end
     local lw = measure(label, UIFont.Small)
-    self:drawRectBorder(x + w - lw - 12, y + 3, lw + 12, 18, 1, color[1], color[2], color[3])
-    text(self, label, x + w - lw - 6, y + 5, color)
+    local bx0 = x + w - lw - 14
+    -- chip: relleno claro tenue del color de estado + borde + texto oscuro
+    rect(self, bx0, y + 2, lw + 14, 19, { color[1] * 0.35 + 0.62, color[2] * 0.35 + 0.62, color[3] * 0.35 + 0.62 })
+    self:drawRectBorder(bx0, y + 2, lw + 14, 19, 1, color[1] * 0.6, color[2] * 0.6, color[3] * 0.6)
+    text(self, label, bx0 + 7, y + 5, { color[1] * 0.5, color[2] * 0.5, color[3] * 0.5 })
 
     local cy = y + 34
     text(self, (heist and heist.destination) or "Knox Bank, Louisville", x, cy, INK_SOFT)
