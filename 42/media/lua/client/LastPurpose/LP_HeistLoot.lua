@@ -5,20 +5,13 @@ local BAG_TYPE = "LastPurpose.SealedKnoxBankLoot"
 local function SPAWN() return LastPurpose.World.BANK_LOOT_SPAWN end
 local PICKUP_CHECK_RADIUS = 80
 
--- El icono de inventario ya es gris de verdad (IconsForTexture = DuffelBag_Grey
--- en el script). No se aplica tinte (1.0 = neutro): un multiplicador sobre un
--- gris ya lo oscurecia. Antes esto forzaba casi-negro (0.08) sobre el icono
--- tostado por defecto.
-local LOOT_TINT = 1.0
+-- NO-OP a proposito. El tinte por codigo (setCustomColor + setColor*) sobre
+-- estas bolsas rompia su renderizado (icono/modelo salian en negro), tanto
+-- con 0.08 como con 1.0. La bolsa usa ahora el icono/modelo vanilla del
+-- duffel tal cual (Icon = Duffelbag en el script). Si se quiere gris de
+-- verdad hara falta un icono/modelo propio, no un multiplicador.
 function LastPurpose.applyLootVisual(item)
-    if not item then return end
-    pcall(function()
-        item:setColorRed(LOOT_TINT)
-        item:setColorGreen(LOOT_TINT)
-        item:setColorBlue(LOOT_TINT)
-        item:setColor(Color.new(LOOT_TINT, LOOT_TINT, LOOT_TINT))
-        item:setCustomColor(true)
-    end)
+    -- deliberadamente sin efecto
 end
 
 local function markLootBag(bag)
