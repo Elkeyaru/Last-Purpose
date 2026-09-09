@@ -295,10 +295,6 @@ function LPComputer:createChildren()
     self.actionButton.backgroundColor = { r = WINFACE[1], g = WINFACE[2], b = WINFACE[3], a = 1 }
     self.actionButton.borderColor = { r = 0, g = 0, b = 0, a = 1 }
     self.actionButton.textColor = { r = INK[1], g = INK[2], b = INK[3], a = 1 }
-    local finger = icon(IC.finger)
-    if finger and self.actionButton.setImage then
-        pcall(function() self.actionButton:setImage(finger) end)
-    end
     self:addChild(self.actionButton)
 
     self:refreshAction()
@@ -310,14 +306,20 @@ function LPComputer:refreshAction()
     local show = self.app == "misiones"
     self.actionButton:setVisible(show)
     if not show then return end
+    local function setImg(on)
+        if not self.actionButton.setImage then return end
+        pcall(function() self.actionButton:setImage(on and icon(IC.finger) or nil) end)
+    end
     if not player or not row or not row.unlocked then
         self.actionButton:setTitle("Bloqueada")
         self.actionButton:setEnable(false)
+        setImg(false)
         return
     end
     local _, _, actionText, enabled = knoxStatus(LastPurpose.getData(player))
     self.actionButton:setTitle(actionText)
     self.actionButton:setEnable(enabled == true)
+    setImg(enabled == true)
 end
 
 function LPComputer:onAction()
@@ -392,25 +394,29 @@ function LPComputer:paint()
     if logo then
         local lw = 320
         local lh = lw * logo:getHeight() / logo:getWidth()
-        self:drawTextureScaled(logo, win.x + win.w + 30, math.floor(self.height / 2 - lh / 2), lw, lh, 0.7, 1, 1, 1)
+        self:drawTextureScaled(logo, win.x + win.w + 30, math.floor(self.height / 2 - lh / 2), lw, lh, 0.9, 1, 1, 1)
     else
         text(self, "XCYOS", win.x + win.w + 30, math.floor(self.height / 2) - 30, PHOSPHOR, UIFont.Large)
     end
 
-    -- overlay CRT: solo sobre el escritorio, ANTES de la ventana, para no
-    -- ensuciar el contenido (era la causa del look apagado).
-    local ov = tex("crt_overlay.png")
-    if ov then self:drawTextureScaled(ov, 0, 0, self.width, self.statusY, 1, 1, 1, 1) end
+    -- scanlines tenues sobre el escritorio (rects en orden, sin textura
+    -- grande que PZ componga al final y ensucie la ventana)
+    for sy = 0, self.statusY, 3 do
+        self:drawRect(0, sy, self.width, 1, 0.05, 0, 0, 0)
+    end
 
-    -- ventana: relleno solido + borde negro, sin bisel ambiguo
-    rect(self, win.x - 2, win.y - 2, win.w + 4, win.h + 4, { 0, 0, 0 })
+    -- ventana: sombra, relleno solido, borde negro
+    rect(self, win.x - 3, win.y - 3, win.w + 6, win.h + 6, { 0, 0, 0 }, 0.45)
     rect(self, win.x, win.y, win.w, win.h, WINFACE)
-    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.06, 0.06, 0.05)
-    rect(self, win.x + 1, win.y + 1, win.w - 2, 24, TITLE_BG)
-    drawIcon(self, IC.folder, win.x + 6, win.y + 3, 20, { 0.90, 0.78, 0.40 })
-    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.92, 1.0, 0.97 })
-    drawIcon(self, IC.min, win.x + win.w - 70, win.y + 4, 18, { 0.85, 0.90, 0.87 })
-    drawIcon(self, IC.max, win.x + win.w - 48, win.y + 4, 18, { 0.85, 0.90, 0.87 })
+    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.05, 0.05, 0.04)
+    -- barra de titulo: teal oscuro, dibujada dos veces por si algo compone encima
+    rect(self, win.x + 1, win.y + 1, win.w - 2, 25, TITLE_BG)
+    rect(self, win.x + 1, win.y + 1, win.w - 2, 25, TITLE_BG)
+    self:drawRect(win.x + 1, win.y + 26, win.w - 2, 1, 1, 0, 0, 0)
+    drawIcon(self, IC.folder, win.x + 6, win.y + 4, 18, { 0.92, 0.80, 0.42 })
+    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.60, 1.0, 0.92 })
+    drawIcon(self, IC.min, win.x + win.w - 72, win.y + 5, 16, { 0.85, 0.92, 0.89 })
+    drawIcon(self, IC.max, win.x + win.w - 50, win.y + 5, 16, { 0.85, 0.92, 0.89 })
     -- (la X es un hijo ISButton)
 
     local bx, by = win.x + 14, win.y + 36
