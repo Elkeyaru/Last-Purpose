@@ -96,8 +96,13 @@ local IC = {
 LPComputer = ISPanel:derive("LPComputer")
 
 function LPComputer:new()
-    local w, h = getCore():getScreenWidth(), getCore():getScreenHeight()
-    local o = ISPanel:new(0, 0, w, h)
+    local sw, sh = getCore():getScreenWidth(), getCore():getScreenHeight()
+    -- NO a pantalla completa: PZ trata un panel del tamano exacto de la
+    -- pantalla como un menu, pausa el juego y oscurece TODO (incluida esta
+    -- UI). Un panel centrado grande (~94% x 92%) no dispara esa pausa.
+    local w = math.floor(sw * 0.94)
+    local h = math.floor(sh * 0.92)
+    local o = ISPanel:new(math.floor((sw - w) / 2), math.floor((sh - h) / 2), w, h)
     setmetatable(o, self)
     self.__index = self
     o.background = false
@@ -257,12 +262,17 @@ function LPComputer:createChildren()
     self.closeButton.textColor = { r = 0.78, g = 0.16, b = 0.13, a = 1 }
     self:addChild(self.closeButton)
 
-    local aw, ah = 224, 34
-    self.actionButton = ISButton:new(win.x + win.w - aw - 24, win.y + win.h - ah - 22, aw, ah, "", self, LPComputer.onAction)
+    -- Boton de accion: el visual lo dibujamos nosotros en paint() (para que
+    -- no se ponga negro al deshabilitarse ni pise nuestra paleta). El
+    -- ISButton queda transparente y solo sirve de zona de clic.
+    local aw, ah = 236, 36
+    self.actionRect = { x = win.x + win.w - aw - 24, y = win.y + win.h - ah - 22, w = aw, h = ah }
+    self.actionButton = ISButton:new(self.actionRect.x, self.actionRect.y, aw, ah, "", self, LPComputer.onAction)
     self.actionButton:initialise(); self.actionButton:instantiate()
-    self.actionButton.backgroundColor = { r = WINFACE[1], g = WINFACE[2], b = WINFACE[3], a = 1 }
-    self.actionButton.borderColor = { r = 0, g = 0, b = 0, a = 1 }
-    self.actionButton.textColor = { r = INK[1], g = INK[2], b = INK[3], a = 1 }
+    self.actionButton.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.actionButton.backgroundColorMouseOver = { r = 1, g = 1, b = 1, a = 0.06 }
+    self.actionButton.borderColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.actionButton.textColor = { r = 0, g = 0, b = 0, a = 0 }
     self:addChild(self.actionButton)
 
     self:refreshAction()
@@ -273,21 +283,32 @@ function LPComputer:refreshAction()
     local row = self:selectedRow()
     local show = self.app == "misiones"
     self.actionButton:setVisible(show)
+    self.showAction = show
     if not show then return end
-    local function setImg(on)
-        if not self.actionButton.setImage then return end
-        pcall(function() self.actionButton:setImage(on and icon(IC.finger) or nil) end)
-    end
     if not player or not row or not row.unlocked then
-        self.actionButton:setTitle("Bloqueada")
-        self.actionButton:setEnable(false)
-        setImg(false)
-        return
+        self.actionLabel, self.actionEnabled = "Bloqueada", false
+    else
+        local _, _, actionText, enabled = knoxStatus(LastPurpose.getData(player))
+        self.actionLabel, self.actionEnabled = actionText, (enabled == true)
     end
-    local _, _, actionText, enabled = knoxStatus(LastPurpose.getData(player))
-    self.actionButton:setTitle(actionText)
-    self.actionButton:setEnable(enabled == true)
-    setImg(enabled == true)
+    self.actionButton:setEnable(self.actionEnabled)
+end
+
+-- Dibuja el boton de accion (rect crema + sombra + huella + label).
+function LPComputer:drawActionButton()
+    if not self.showAction or not self.actionRect then return end
+    local r = self.actionRect
+    local on = self.actionEnabled
+    local a = on and 1 or 0.55
+    self:drawRect(r.x + 3, r.y + 3, r.w, r.h, a, INK[1], INK[2], INK[3])          -- sombra dura
+    self:drawRect(r.x, r.y, r.w, r.h, a, WINFACE[1], WINFACE[2], WINFACE[3])
+    if on then self:drawRect(r.x, r.y, r.w, r.h, 0.25, PHOSPHOR[1], PHOSPHOR[2], PHOSPHOR[3]) end
+    self:drawRectBorder(r.x, r.y, r.w, r.h, a, INK[1], INK[2], INK[3])
+    self:drawRectBorder(r.x + 1, r.y + 1, r.w - 2, r.h - 2, a, INK[1], INK[2], INK[3])
+    drawIcon(self, IC.finger, r.x + 8, r.y + 4, 28, { INK[1], INK[2], INK[3] })
+    local lbl = self.actionLabel or ""
+    local lw = measure(lbl, UIFont.Small)
+    text(self, lbl, r.x + 44 + math.floor((r.w - 44 - lw) / 2), r.y + 10, { INK[1], INK[2], INK[3] })
 end
 
 function LPComputer:onAction()
@@ -334,6 +355,10 @@ function LPComputer:onMouseDown(x, y)
         end
     end
     return ISPanel.onMouseDown(self, x, y)
+end
+
+function LPComputer:onMouseDownOutside(x, y)
+    self:onClose()
 end
 
 -- ---- pintado -------------------------------------------------------
@@ -411,6 +436,7 @@ function LPComputer:paint()
         pane(bx + listW + 14, by, bw - listW - 14, bh)
         self:renderList(bx + 12, by + 12, listW - 24)
         self:renderDetail(bx + listW + 14 + 18, by + 16, bw - listW - 14 - 36)
+        self:drawActionButton()
     else
         pane(bx, by, bw, bh)
         self:renderStub(bx + 22, by + 20, bw - 44)
@@ -498,20 +524,62 @@ function LPComputer:renderDetail(x, y, w)
     local cy = y + 34
     text(self, (heist and heist.destination) or "Knox Bank, Louisville", x, cy, INK_SOFT)
     cy = cy + 24
-    text(self, "OBJETIVO", x, cy, INK); cy = cy + 18
-    cy = drawWrapped(self, (heist and heist.mission) or "Adelantarse a la competencia.", x, cy, w, INK)
-    cy = cy + 12
-    text(self, "RECOMPENSA", x, cy, INK); cy = cy + 20
-    local tiles = { { IC.cash, "Efectivo" }, { IC.gold, "Oro" }, { IC.crate, "Suministros" } }
+
+    -- OBJETIVO en dos columnas: texto a la izquierda, mini-mapa a la derecha
+    local mapW = math.min(200, math.floor(w * 0.42))
+    local textW = w - mapW - 18
+    text(self, "OBJETIVO", x, cy, INK)
+    self:sectionRule(x, cy + 15, w)
+    local objY = cy + 24
+    local endY = drawWrapped(self, (heist and heist.mission)
+        or "Adelantarse a la competencia. El banco mas grande de Kentucky.", x, objY, textW, INK)
+    self:drawMap(x + textW + 18, cy + 20, mapW, math.max(endY - objY, mapW - 10),
+        (group and group.city) or "LOUISVILLE")
+    cy = math.max(endY, cy + 20 + mapW - 10) + 18
+
+    text(self, "RECOMPENSA ESTIMADA", x, cy, INK)
+    self:sectionRule(x, cy + 15, w)
+    cy = cy + 24
+    local tiles = { { IC.cash, "$25 000", "EFECTIVO" }, { IC.gold, "x5", "LINGOTES" }, { IC.crate, "+", "SUMINISTROS" } }
     for ti, t in ipairs(tiles) do
-        local tx = x + (ti - 1) * 92
-        self:drawRectBorder(tx, cy, 84, 58, 1, INK[1], INK[2], INK[3])
-        drawIcon(self, t[1], tx + 27, cy + 6, 30, INK)
-        local lw2 = measure(t[2], UIFont.Small)
-        text(self, t[2], tx + math.floor((84 - lw2) / 2), cy + 40, INK_SOFT)
+        local tw, tx = 104, x + (ti - 1) * 112
+        self:drawRect(tx + 2, cy + 2, tw, 64, 1, 0, 0, 0)
+        rect(self, tx, cy, tw, 64, WINFACE)
+        self:drawRectBorder(tx, cy, tw, 64, 1, INK[1], INK[2], INK[3])
+        self:drawRect(tx + 1, cy + 1, tw - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
+        drawIcon(self, t[1], tx + math.floor(tw / 2) - 14, cy + 6, 28, INK)
+        local vw = measure(t[2], UIFont.Small)
+        text(self, t[2], tx + math.floor((tw - vw) / 2), cy + 34, INK)
+        local lw2 = measure(t[3], UIFont.Small)
+        text(self, t[3], tx + math.floor((tw - lw2) / 2), cy + 48, INK_SOFT)
     end
-    cy = cy + 66
+    cy = cy + 74
     drawWrapped(self, "5 lingotes de oro, 4 diamantes, 6 fajos, suministros de mid-game, municion y 2 niveles de Destreza.", x, cy, w, INK_SOFT)
+end
+
+-- Regla de seccion 1px, tinta.
+function LPComputer:sectionRule(x, y, w)
+    self:drawRect(x, y, w, 1, 1, INK[1], INK[2], INK[3])
+end
+
+-- Mini-mapa estilizado (rejilla de calles + diagonal + mira + N), dibujado
+-- con primitivas: el mockup usa un SVG, aca es lo mas cerca sin un PNG.
+function LPComputer:drawMap(x, y, w, h, label)
+    rect(self, x, y, w, h, { 0.812, 0.796, 0.749 })
+    self:drawRectBorder(x, y, w, h, 1, INK[1], INK[2], INK[3])
+    local gc = { 0.55, 0.53, 0.49 }
+    for gx = x + 16, x + w - 8, 26 do self:drawRect(gx, y + 2, 1, h - 4, 1, gc[1], gc[2], gc[3]) end
+    for gy = y + 16, y + h - 8, 24 do self:drawRect(x + 2, gy, w - 4, 1, 1, gc[1], gc[2], gc[3]) end
+    -- "avenida" diagonal
+    self:drawRect(x + 6, y + math.floor(h * 0.62), math.floor(w * 0.5), 2, 1, 0.42, 0.40, 0.36)
+    -- objetivo: recuadro + mira
+    local ox, oy = x + math.floor(w * 0.52), y + math.floor(h * 0.42)
+    self:drawRectBorder(ox - 8, oy - 7, 16, 14, 1, 0.36, 0.35, 0.31)
+    self:drawRect(ox + 18, oy + 8, 1, 22, 1, INK[1], INK[2], INK[3])
+    self:drawRect(ox + 8, oy + 18, 22, 1, 1, INK[1], INK[2], INK[3])
+    self:drawRectBorder(ox + 12, oy + 12, 14, 14, 1, INK[1], INK[2], INK[3])
+    text(self, label, x + 5, y + 3, { 0.16, 0.16, 0.13 })
+    text(self, "N", x + w - 14, y + 3, { 0.16, 0.16, 0.13 })
 end
 
 -- paneles de las otras apps: contenido minimo, real, de solo lectura.
