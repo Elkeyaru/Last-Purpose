@@ -128,11 +128,12 @@ end
 
 -- ---- chrome horneado + zonas de contenido -----------------------------
 local BAKE_W, BAKE_H = 1920, 1080
+-- Medido sobre el xcyos_chrome.png de ChatGPT (sigue GUI_ASSETS.md al pixel).
 local SKIN = {
-    win        = { 172, 60, 1372, 918 },
-    content    = { 202, 112, 1310, 828 },   -- area que pinta KeyasCSS (ver docs/GUI_ASSETS.md)
-    titleClose = { 1500, 62, 40, 30 },
-    rail       = { { 20, 40, 132, 92 }, { 20, 150, 132, 92 }, { 20, 262, 132, 92 }, { 20, 374, 132, 92 } },
+    win        = { 172, 60, 1372, 918 },     -- generoso a proposito: clic fuera de aqui = cerrar
+    content    = { 202, 112, 1310, 828 },    -- rectangulo oscuro del PNG; lo pinta KeyasCSS
+    titleClose = { 1506, 62, 34, 30 },       -- glifo X de la barra de titulo
+    rail       = { { 19, 39, 133, 93 }, { 19, 149, 133, 93 }, { 19, 261, 133, 93 }, { 19, 373, 133, 93 } },
 }
 
 -- Hoja de estilos del CONTENIDO. Escrita en espacio 1920; KeyasCSS.parse la
