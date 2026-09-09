@@ -8,3 +8,4 @@ mod.info text eol=lf
 *.jpeg binary
 *.tiles binary
 *.pack binary
+*.fnt text eol=lf
