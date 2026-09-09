@@ -128,13 +128,16 @@ end
 
 -- ---- chrome horneado + zonas de contenido -----------------------------
 local BAKE_W, BAKE_H = 1920, 1080
--- Medido sobre el xcyos_chrome.png de ChatGPT (sigue GUI_ASSETS.md al pixel).
+-- Medido sobre el xcyos_chrome.png actual (espacio 1920x1080). La GUI se
+-- abre a pantalla completa: el chrome se estira a la pantalla y estas zonas
+-- se escalan con ella (sx = w/1920, sy = h/1080).
 local SKIN = {
-    win        = { 172, 60, 1372, 918 },     -- generoso a proposito: clic fuera de aqui = cerrar
-    content    = { 202, 112, 1310, 828 },    -- rectangulo oscuro del PNG; lo pinta KeyasCSS
-    titleClose = { 1506, 62, 34, 30 },       -- glifo X de la barra de titulo
-    rail       = { { 19, 39, 133, 93 }, { 19, 149, 133, 93 }, { 19, 261, 133, 93 }, { 19, 373, 133, 93 } },
+    content    = { 176, 107, 1365, 843 },    -- rectangulo de contenido del PNG; lo pinta KeyasCSS
+    titleClose = { 1500, 62, 44, 34 },       -- glifo X de la barra de titulo
+    titleText  = { 232, 66, 700, 34 },       -- zona del texto del titulo (para repintarlo por app)
+    rail       = { { 12, 40, 142, 96 }, { 12, 150, 142, 96 }, { 12, 260, 142, 96 }, { 12, 370, 142, 96 } },
 }
+local TITLE_BG = { 0.196, 0.255, 0.235 }     -- verde oscuro de la barra de titulo horneada
 
 -- Hoja de estilos del CONTENIDO. Escrita en espacio 1920; KeyasCSS.parse la
 -- escala por self.s en layout(). Un color de panel algo mas oscuro que la
@@ -148,8 +151,8 @@ local CONTENT_CSS = [[
     box-shadow: 0 6px 18px rgba(0,0,0,0.28);
     overflow: hidden; height: 100%; display: flex; flex-direction: column;
   }
-  .list-pane { width: 320px; padding: 14px 8px 14px 14px; }
-  .detail-pane { flex-grow: 1; padding: 22px 26px; }
+  .list-pane { width: 360px; padding: 16px 10px 16px 16px; }
+  .detail-pane { flex-grow: 1; padding: 28px 36px; }
 
   .city { display: flex; flex-direction: column; margin-top: 16px; }
   .city.first { margin-top: 2px; }
@@ -188,22 +191,22 @@ local CONTENT_CSS = [[
     border: 1px solid #16160f;
   }
 
-  .sec { margin-top: 24px; display: flex; flex-direction: column; }
+  .sec { margin-top: 30px; display: flex; flex-direction: column; }
   .sec-h { font: lp_ui_14; color: #16160f; padding-bottom: 5px; }
-  .sec .rule-soft { margin-bottom: 10px; }
-  .grid { display: flex; flex-direction: row; gap: 22px; align-items: flex-start; }
-  .body { font: lp_ui_18; color: #16160f; line-height: 26px; flex-grow: 1; }
-  .body-soft { font: lp_ui_14; color: #4a473c; line-height: 22px; margin-top: 12px; }
+  .sec .rule-soft { margin-bottom: 12px; }
+  .grid { display: flex; flex-direction: row; gap: 28px; align-items: flex-start; }
+  .body { font: lp_ui_18; color: #16160f; line-height: 28px; flex-grow: 1; }
+  .body-soft { font: lp_ui_14; color: #4a473c; line-height: 22px; margin-top: 14px; }
 
   .map {
-    width: 260px; height: 210px; border: 2px solid #16160f;
+    width: 300px; height: 240px; border: 2px solid #16160f;
     border-radius: 4px; background: #d0cdc3;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   }
 
-  .reward { display: flex; flex-direction: row; gap: 14px; margin-top: 8px; }
+  .reward { display: flex; flex-direction: row; gap: 16px; margin-top: 10px; }
   .tile {
-    width: 138px; padding: 12px 8px 10px; border: 2px solid #16160f;
+    width: 152px; padding: 14px 10px 12px; border: 2px solid #16160f;
     border-radius: 6px; background: #b9b6ad;
     box-shadow: 4px 4px 0 rgba(22,22,15,0.65);
     display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -240,12 +243,10 @@ LPComputer = ISPanel:derive("LPComputer")
 
 function LPComputer:new()
     local sw, sh = getCore():getScreenWidth(), getCore():getScreenHeight()
-    -- ~90% de la pantalla, misma proporcion que el PNG, centrado. Por debajo
-    -- del tamano de pantalla -> PZ no oscurece el juego.
-    local scale = math.min(sw * 0.90 / BAKE_W, sh * 0.90 / BAKE_H)
-    local w = math.floor(BAKE_W * scale)
-    local h = math.floor(BAKE_H * scale)
-    local o = ISPanel:new(math.floor((sw - w) / 2), math.floor((sh - h) / 2), w, h)
+    -- Pantalla completa: ocupa toda la ventana del juego. El chrome
+    -- (xcyos_chrome.png, 16:9) se estira a la pantalla; en pantallas que no
+    -- son 16:9 hay un leve estirado, asumido a proposito.
+    local o = ISPanel:new(0, 0, sw, sh)
     setmetatable(o, self)
     self.__index = self
     o.background = false
@@ -257,19 +258,24 @@ function LPComputer:new()
 end
 
 function LPComputer:zone(bake)
-    local s = self.s or (self.width / BAKE_W)
-    return math.floor(bake[1] * s), math.floor(bake[2] * s),
-           math.floor(bake[3] * s), math.floor(bake[4] * s)
+    local sx = self.sx or (self.width / BAKE_W)
+    local sy = self.sy or (self.height / BAKE_H)
+    return math.floor(bake[1] * sx), math.floor(bake[2] * sy),
+           math.floor(bake[3] * sx), math.floor(bake[4] * sy)
 end
 
 function LPComputer:layout()
-    self.s = self.width / BAKE_W
+    self.sx = self.width / BAKE_W
+    self.sy = self.height / BAKE_H
     self.appHitboxes = {}
     for i, app in ipairs(APPS) do
         local rx, ry, rw, rh = self:zone(SKIN.rail[i])
         self.appHitboxes[i] = { id = app.id, x = rx, y = ry, w = rw, h = rh }
     end
-    self.sheet = KeyasCSS.parse(CONTENT_CSS, { scale = self.s })
+    -- El contenido se maqueta en la escala vertical (el ancho sobra al
+    -- estirar). Las fuentes bitmap no escalan: en pantallas mayores que
+    -- 1080p el texto se vera algo pequeno (limitacion conocida).
+    self.sheet = KeyasCSS.parse(CONTENT_CSS, { scale = self.sy })
 end
 
 -- ---- helpers para hooks onPaint del arbol ----------------------------
@@ -517,16 +523,14 @@ function LPComputer:onMouseDown(x, y)
             return true
         end
     end
-    local wx, wy, ww, wh = self:zone(SKIN.win)
-    if x < wx or x > wx + ww or y < wy or y > wy + wh then
-        self:onClose()
-        return true
-    end
-    return ISPanel.onMouseDown(self, x, y)
+    -- La GUI ocupa toda la pantalla y NO se cierra al hacer clic fuera de un
+    -- elemento: solo con la X o con ESC. Se consume el clic para que no
+    -- llegue al mundo por debajo.
+    return true
 end
 
 function LPComputer:onMouseDownOutside(x, y)
-    self:onClose()
+    -- No cerrar. (A pantalla completa no hay "fuera", pero se deja explicito.)
 end
 
 -- ---- pintado ---------------------------------------------------
@@ -541,8 +545,15 @@ function LPComputer:prerender()
     end
 end
 
+local TITLE_BY_APP = {
+    misiones = "LAST PURPOSE // ARCHIVO DE MISIONES",
+    notas    = "LAST PURPOSE // NOTAS",
+    archivos = "LAST PURPOSE // ARCHIVOS",
+    sistema  = "LAST PURPOSE // SISTEMA",
+}
+
 function LPComputer:paint()
-    if not self.s then self:layout() end
+    if not self.sx then self:layout() end
     ensureFontsRegistered()
 
     local chrome = tex("xcyos_chrome.png")
@@ -552,6 +563,16 @@ function LPComputer:paint()
         self:drawRect(0, 0, self.width, self.height, 1, DESKTOP[1], DESKTOP[2], DESKTOP[3])
     end
 
+    -- Titulo dinamico: el chrome trae horneado "ARCHIVO DE MISIONES"; para
+    -- las otras apps se repinta encima de su zona.
+    if self.app ~= "misiones" then
+        local tx, ty, tw, th = self:zone(SKIN.titleText)
+        self:drawRect(tx, ty, tw, th, 1, TITLE_BG[1], TITLE_BG[2], TITLE_BG[3])
+        KeyasUI.text(self, TITLE_BY_APP[self.app] or "", tx + 2, ty + math.floor(th * 0.12),
+            { r = 0.918, g = 1.0, b = 0.965, a = 1 }, "lp_ui_18")
+    end
+
+    -- resaltado de la pestana activa del rail
     for i, app in ipairs(APPS) do
         if self.app == app.id then
             local rx, ry, rw, rh = self:zone(SKIN.rail[i])
@@ -596,8 +617,24 @@ end
 if not LastPurpose.computerKeyHook then
     LastPurpose.computerKeyHook = true
     Events.OnKeyPressed.Add(function(key)
+        -- ESC cierra la GUI si esta abierta.
         if key == Keyboard.KEY_ESCAPE and LastPurpose.computer then
             LastPurpose.computer:onClose()
+            return
+        end
+        -- E abre la GUI si el jugador esta junto a la mesa (como los
+        -- vehiculos). No hace nada si ya esta abierta, si el jugador no es
+        -- Ladron, o si hay un menu contextual del mundo abierto.
+        if key == Keyboard.KEY_E and not LastPurpose.computer then
+            local ok = pcall(function()
+                local player = LastPurpose.getPlayerSafe(0)
+                if not player or player:isDead() then return end
+                if not LastPurpose.isBurglar(player) then return end
+                if ISContextMenu and ISContextMenu.instance and ISContextMenu.instance.visibleCheck then return end
+                if not (LastPurpose.findNearbyTable and LastPurpose.findNearbyTable(player)) then return end
+                LastPurpose.openComputer(player)
+            end)
+            if not ok then LastPurpose.debugPrint("Fallo el atajo E de la mesa") end
         end
     end)
 end

@@ -43,6 +43,13 @@ local function findNearbyTable(player)
     return nil, nil
 end
 
+-- Publico: lo usa LP_Computer.lua para la interaccion con la tecla E.
+-- Devuelve (square, object) o (nil, nil).
+function LastPurpose.findNearbyTable(player)
+    if not player then return nil, nil end
+    return findNearbyTable(player)
+end
+
 local function ensureNativeVisual(tableObject)
     local objectData = tableObject:getModData()
     local currentSprite = tableObject:getSprite()
