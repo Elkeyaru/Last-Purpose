@@ -7,6 +7,10 @@ referencia histórica.
 
 ## Sin publicar
 
+### Pendiente
+- Abrir la mesa con **E** (acción contextual, como los vehículos), solo al
+  estar cerca. Además del menú contextual actual.
+
 ### Añadido
 - **Hub del ordenador — hito 1 (`LP_Computer.lua`, nuevo).** La mesa de
   planificación gana una opción de menú «Usar el ordenador» que abre una GUI
