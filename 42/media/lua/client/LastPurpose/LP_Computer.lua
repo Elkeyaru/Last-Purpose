@@ -1,6 +1,7 @@
 require "ISUI/ISPanel"
 require "ISUI/ISButton"
 require "LastPurpose/LP_TermFontData"
+require "KeyasLib/KeyasUI"
 
 -- ---------------------------------------------------------------------------
 -- LP_Computer.lua - Hito 1 del hub del ordenador (roadmap punto 2).
@@ -131,88 +132,52 @@ local function bevel(self, x, y, w, h, face, raised)
     rect(self, x + w - 1, y, 1, h, lo)
 end
 
--- ---- fuente de terminal (atlas propio VT323) --------------------------
--- B42 no deja registrar una fuente de mod nueva sin pisar las vanilla, asi
--- que se dibuja el texto glifo a glifo desde nuestro atlas con
--- drawSubTexture. Si el atlas o los datos faltan, cae a UIFont.
-local FONT_ATLAS_DIR = "media/ui/LastPurpose/"
-local fontCache = {}
-local function termFont(px)
-    if fontCache[px] == nil then
-        local d = LP_TermFontData and LP_TermFontData[px]
-        local ok, atlas = pcall(getTexture, FONT_ATLAS_DIR .. "lp_term_" .. px .. "_0.png")
-        fontCache[px] = (d and ok and atlas) and { d = d, atlas = atlas } or false
-    end
-    return fontCache[px] or nil
+-- ---- fuente de terminal (VT323) via KeyasUI --------------------------
+-- El renderizado glifo-a-glifo desde el atlas ahora vive en KeyasUI
+-- (KeyasLib). Aca solo registramos nuestras dos fuentes una vez y
+-- enrutamos los helpers de este archivo por KeyasUI.text/measure. Si
+-- KeyasUI o el atlas no estan, KeyasUI cae a UIFont solo; y si KeyasUI ni
+-- siquiera cargo (dependencia ausente), estos helpers caen a drawText.
+local FONTS_REGISTERED = false
+local function ensureFontsRegistered()
+    if FONTS_REGISTERED then return end
+    if not (KeyasUI and KeyasUI.registerFont and LP_TermFontData) then return end
+    KeyasUI.registerFont("lp_term_18", {
+        atlasPath = "media/ui/LastPurpose/lp_term_18_0.png",
+        metrics = LP_TermFontData[18], size = 18,
+    })
+    KeyasUI.registerFont("lp_term_26", {
+        atlasPath = "media/ui/LastPurpose/lp_term_26_0.png",
+        metrics = LP_TermFontData[26], size = 26,
+    })
+    FONTS_REGISTERED = true
 end
 
-local function pxOf(font) return (font == UIFont.Large) and 26 or 18 end
-
--- iterador de code points UTF-8 (1-3 bytes; el mod no usa mas)
-local function eachCP(str)
-    local i, n = 1, #str
-    return function()
-        if i > n then return nil end
-        local b = string.byte(str, i)
-        if b < 0x80 then i = i + 1; return b end
-        if b >= 0xF0 then i = i + 4; return 63 end
-        if b >= 0xE0 and i + 2 <= n then
-            local b2, b3 = string.byte(str, i + 1), string.byte(str, i + 2)
-            i = i + 3
-            return (b - 0xE0) * 4096 + (b2 - 0x80) * 64 + (b3 - 0x80)
-        end
-        if b >= 0xC0 and i + 1 <= n then
-            local b2 = string.byte(str, i + 1)
-            i = i + 2
-            return (b - 0xC0) * 64 + (b2 - 0x80)
-        end
-        i = i + 1
-        return 63
-    end
-end
-
-local function termWidth(str, px)
-    local f = termFont(px)
-    if not f then return nil end
-    local adv = f.d.g[32] and f.d.g[32][7] or math.floor(px / 2)
-    local w = 0
-    for cp in eachCP(tostring(str)) do
-        local g = f.d.g[cp]
-        w = w + (g and g[7] or adv)
-    end
-    return w
-end
-
-local function termDraw(self, str, x, y, c, px)
-    local f = termFont(px)
-    if not f then return nil end
-    local a = f.atlas
-    local adv = f.d.g[32] and f.d.g[32][7] or math.floor(px / 2)
-    local penX = x
-    for cp in eachCP(tostring(str)) do
-        local g = f.d.g[cp] or f.d.g[63]
-        if g and g[3] > 0 then
-            self:drawSubTexture(a, g[1], g[2], g[3], g[4], penX + g[5], y + g[6], g[3], g[4], 1, c[1], c[2], c[3])
-        end
-        penX = penX + ((g and g[7]) or adv)
-    end
-    return penX
-end
+local function fontIdOf(font) return (font == UIFont.Large) and "lp_term_26" or "lp_term_18" end
 
 local function measure(str, font)
-    local w = termWidth(str, pxOf(font))
-    if w then return w end
+    ensureFontsRegistered()
+    if KeyasUI and KeyasUI.measure then
+        return (KeyasUI.measure(tostring(str), fontIdOf(font)))
+    end
     return getTextManager():MeasureStringX(font or UIFont.Small, tostring(str))
 end
 
 local function lineH(font)
-    local f = termFont(pxOf(font))
-    if f then return f.d.lh end
+    ensureFontsRegistered()
+    if KeyasUI and KeyasUI.measure then
+        local _, h = KeyasUI.measure("Mg", fontIdOf(font))
+        return h or 14
+    end
     return getTextManager():getFontHeight(font or UIFont.Small)
 end
 
 local function text(self, str, x, y, c, font)
-    if termDraw(self, str, x, y, c, pxOf(font)) then return end
+    ensureFontsRegistered()
+    if KeyasUI and KeyasUI.text then
+        KeyasUI.text(self, tostring(str), x, y, { r = c[1], g = c[2], b = c[3], a = 1 }, fontIdOf(font))
+        return
+    end
     self:drawText(tostring(str), x, y, c[1], c[2], c[3], 1, font or UIFont.Small)
 end
 

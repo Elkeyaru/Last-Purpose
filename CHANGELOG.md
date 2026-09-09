@@ -7,11 +7,19 @@ referencia histórica.
 
 ## Sin publicar
 
+### Añadido
+- **Dependencia de KeyasLib** (`require=KeyasLib` en ambos `mod.info`). El
+  renderizado de la fuente de terminal del ordenador (glifo a glifo desde el
+  atlas) pasó de código propio en `LP_Computer.lua` a
+  `KeyasUI.registerFont` + `KeyasUI.text/measure` de KeyasLib. Sin cambio de
+  comportamiento; si KeyasLib no está o el atlas falla, cae a `UIFont`.
+
 ### Pendiente
 - Abrir la mesa con **E** (acción contextual, como los vehículos), solo al
   estar cerca. Además del menú contextual actual.
-- Migrar `LP_Computer` / `LP_BankSecurity` / `LP_Options` a **KeyasLib**
-  (`require=KeyasLib`), sin cambiar la narrativa ni los flujos validados.
+- Migrar `LP_BankSecurity` a `KeyasZones` y `LP_Options` a `KeyasOptions`.
+  Se dejó para después de probar KeyasLib en juego con un consumidor real:
+  el sellado del banco de 1.2.0 está validado y no se toca hasta entonces.
 
 ## 1.2.0 — 2026-09-08
 

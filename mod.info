@@ -1,5 +1,6 @@
 name=Last Purpose [B42]
 id=LastPurposeB42
+require=KeyasLib
 description=Campana narrativa para el Ladron en Build 42. "El ultimo golpe": intercepta una transmision de radio, sigue la pista hasta una nota cifrada, reconoce el Knox Bank de Louisville y ejecuta el asalto dentro de la ventana nocturna, con una emboscada de escape y un botin que se revisa en el refugio. Incluye un rastreador tipo diario y una mesa con ordenador (terminal retro) como centro de misiones. Mas golpes en Louisville y otras profesiones en camino. Un jugador; sin compatibilidad con partidas anteriores a la 1.0.
 poster=poster.png
 version=1.2.0
