@@ -107,10 +107,10 @@ end
 function LPComputer:layout()
     local sw, sh = self.width, self.height
     self.statusY = sh - 24
-    local winX = RAIL_W + 26
-    local winW = math.min(sw - winX - 26, 1000)
-    local winY = 44
-    local winH = math.min(self.statusY - winY - 16, 660)
+    local winX = RAIL_W + 40
+    local winW = math.min(sw - winX - 60, 900)
+    local winH = math.min(self.statusY - 80, 540)
+    local winY = math.max(40, math.floor((self.statusY - winH) / 2) - 8)
     self.win = { x = winX, y = winY, w = winW, h = winH }
 end
 
@@ -311,47 +311,46 @@ function LPComputer:paint()
     -- marca de agua del escritorio: el logo si esta, si no el texto
     local logo = tex("xcyos_logo.png")
     if logo then
-        local lw = 300
+        local lw = 320
         local lh = lw * logo:getHeight() / logo:getWidth()
-        self:drawTextureScaled(logo, win.x + win.w + 24, math.floor(self.height / 2 - lh / 2), lw, lh, 0.42, 1, 1, 1)
+        self:drawTextureScaled(logo, win.x + win.w + 30, math.floor(self.height / 2 - lh / 2), lw, lh, 0.7, 1, 1, 1)
     else
-        text(self, "XCYOS", win.x + win.w + 26, math.floor(self.height / 2) - 30, { PH_DIM[1], PH_DIM[2], PH_DIM[3] }, UIFont.Large)
-        text(self, "para un proposito aun", win.x + win.w + 26, math.floor(self.height / 2) + 2, LOCKC, UIFont.Small)
+        text(self, "XCYOS", win.x + win.w + 30, math.floor(self.height / 2) - 30, PHOSPHOR, UIFont.Large)
     end
 
-    -- ventana
-    bevel(self, win.x, win.y, win.w, win.h, WINFACE)
-    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0, 0, 0)
-    local gt = tex("grad_title.png")
-    if gt then
-        self:drawTextureScaled(gt, win.x + 1, win.y + 1, win.w - 2, 24, 1, 1, 1, 1)
-    else
-        rect(self, win.x + 1, win.y + 1, win.w - 2, 24, TITLE_BG)
-    end
+    -- overlay CRT: solo sobre el escritorio, ANTES de la ventana, para no
+    -- ensuciar el contenido (era la causa del look apagado).
+    local ov = tex("crt_overlay.png")
+    if ov then self:drawTextureScaled(ov, 0, 0, self.width, self.statusY, 1, 1, 1, 1) end
+
+    -- ventana: relleno solido + borde negro, sin bisel ambiguo
+    rect(self, win.x - 2, win.y - 2, win.w + 4, win.h + 4, { 0, 0, 0 })
+    rect(self, win.x, win.y, win.w, win.h, WINFACE)
+    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.06, 0.06, 0.05)
+    rect(self, win.x + 1, win.y + 1, win.w - 2, 24, TITLE_BG)
     drawIcon(self, IC.folder, win.x + 6, win.y + 3, 20, { 0.90, 0.78, 0.40 })
-    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.90, 1.0, 0.96 })
-    drawIcon(self, IC.min, win.x + win.w - 68, win.y + 3, 18, { 0.82, 0.88, 0.85 })
-    drawIcon(self, IC.max, win.x + win.w - 46, win.y + 3, 18, { 0.82, 0.88, 0.85 })
+    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 30, win.y + 6, { 0.92, 1.0, 0.97 })
+    drawIcon(self, IC.min, win.x + win.w - 70, win.y + 4, 18, { 0.85, 0.90, 0.87 })
+    drawIcon(self, IC.max, win.x + win.w - 48, win.y + 4, 18, { 0.85, 0.90, 0.87 })
     -- (la X es un hijo ISButton)
-
-    -- lineas de escaneo sobre la ventana (fallback si no hay overlay PNG)
-    if not tex("crt_overlay.png") then
-        for sy = win.y + 26, win.y + win.h - 2, 3 do
-            self:drawRect(win.x + 1, sy, win.w - 2, 1, 0.045, 0, 0, 0)
-        end
-    end
 
     local bx, by = win.x + 14, win.y + 36
     local bw, bh = win.w - 28, win.h - 50
 
+    local function pane(px, py, pw, ph)
+        rect(self, px, py, pw, ph, PAGEFACE)
+        self:drawRectBorder(px, py, pw, ph, 1, 0.32, 0.31, 0.28)
+        self:drawRect(px + 1, py + 1, pw - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
+    end
+
     if self.app == "misiones" then
-        local listW = 258
-        bevel(self, bx, by, listW, bh, PAGEFACE, false)
-        bevel(self, bx + listW + 14, by, bw - listW - 14, bh, PAGEFACE, false)
+        local listW = 250
+        pane(bx, by, listW, bh)
+        pane(bx + listW + 14, by, bw - listW - 14, bh)
         self:renderList(bx + 12, by + 12, listW - 24)
         self:renderDetail(bx + listW + 14 + 18, by + 16, bw - listW - 14 - 36)
     else
-        bevel(self, bx, by, bw, bh, PAGEFACE, false)
+        pane(bx, by, bw, bh)
         self:renderStub(bx + 22, by + 20, bw - 44)
     end
 
@@ -359,10 +358,6 @@ function LPComputer:paint()
     rect(self, 0, self.statusY, self.width, 24, { 0.02, 0.13, 0.11 })
     text(self, "XCYOS v1.0.3  |  LAST PURPOSE TERMINAL", 12, self.statusY + 5, PH_DIM)
     textRight(self, "12:47  .  14/07/1993", self.width - 12, self.statusY + 5, PHOSPHOR)
-
-    -- overlay CRT (viñeta + scanlines) por encima de todo
-    local ov = tex("crt_overlay.png")
-    if ov then self:drawTextureScaled(ov, 0, 0, self.width, self.statusY, 1, 1, 1, 1) end
 end
 
 function LPComputer:renderRail()
