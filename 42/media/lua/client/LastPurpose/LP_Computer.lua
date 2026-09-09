@@ -95,13 +95,29 @@ local IC = {
 
 LPComputer = ISPanel:derive("LPComputer")
 
+-- El chrome (bisel, escritorio, marco de ventana, barra de titulo con
+-- degradado, franja, logo, vinneta, barra de estado) se dibuja de una sola
+-- pieza desde xcyos_chrome.png (horneado con System.Drawing, ver
+-- tools/). Estas son las zonas de contenido en el espacio del PNG (1920x1080);
+-- layout() las escala al panel real. Fuera de estas zonas no dibujamos nada:
+-- lo que se ve es el PNG.
+local BAKE_W, BAKE_H = 1920, 1080
+local SKIN = {
+    win        = { 172, 60, 1372, 918 },
+    listPane   = { 202, 116, 246, 834 },   -- area util del panel izquierdo
+    detailPane = { 496, 120, 1012, 826 },
+    titleClose = { 1516, 62, 24, 26 },      -- boton X sobre la barra de titulo
+    rail       = { { 22, 22, 128, 88 }, { 22, 140, 128, 88 }, { 22, 258, 128, 88 }, { 22, 376, 128, 88 } },
+}
+
 function LPComputer:new()
     local sw, sh = getCore():getScreenWidth(), getCore():getScreenHeight()
-    -- NO a pantalla completa: PZ trata un panel del tamano exacto de la
-    -- pantalla como un menu, pausa el juego y oscurece TODO (incluida esta
-    -- UI). Un panel centrado grande (~94% x 92%) no dispara esa pausa.
-    local w = math.floor(sw * 0.94)
-    local h = math.floor(sh * 0.92)
+    -- Panel con la MISMA proporcion que el PNG (16:9), centrado, ~94% de la
+    -- pantalla. No es exactamente del tamano de la pantalla -> PZ no lo trata
+    -- como menu -> no pausa ni oscurece el juego.
+    local scale = math.min(sw * 0.95 / BAKE_W, sh * 0.95 / BAKE_H)
+    local w = math.floor(BAKE_W * scale)
+    local h = math.floor(BAKE_H * scale)
     local o = ISPanel:new(math.floor((sw - w) / 2), math.floor((sh - h) / 2), w, h)
     setmetatable(o, self)
     self.__index = self
@@ -114,14 +130,22 @@ function LPComputer:new()
     return o
 end
 
+-- Convierte una zona en espacio-PNG a coordenadas del panel.
+function LPComputer:zone(bake)
+    local s = self.s or (self.width / BAKE_W)
+    return math.floor(bake[1] * s), math.floor(bake[2] * s),
+           math.floor(bake[3] * s), math.floor(bake[4] * s)
+end
+
 function LPComputer:layout()
-    local sw, sh = self.width, self.height
-    self.statusY = sh - 24
-    local winX = RAIL_W + 40
-    local winW = math.min(sw - winX - 60, 900)
-    local winH = math.min(self.statusY - 80, 540)
-    local winY = math.max(40, math.floor((self.statusY - winH) / 2) - 8)
-    self.win = { x = winX, y = winY, w = winW, h = winH }
+    self.s = self.width / BAKE_W
+    self.appHitboxes = {}
+    for i, app in ipairs(APPS) do
+        local rx, ry, rw, rh = self:zone(SKIN.rail[i])
+        self.appHitboxes[i] = { id = app.id, x = rx, y = ry, w = rw, h = rh }
+    end
+    local dx, dy, dw, dh = self:zone(SKIN.detailPane)
+    self.actionRect = { x = dx + dw - 232, y = dy + dh - 46, w = 224, h = 36 }
 end
 
 -- ---- helpers de pintado ------------------------------------------------
@@ -253,21 +277,22 @@ end
 function LPComputer:createChildren()
     ISPanel.createChildren(self)
     self:layout()
-    local win = self.win
 
-    self.closeButton = ISButton:new(win.x + win.w - 24, win.y + 4, 20, 18, "X", self, LPComputer.onClose)
+    -- La X esta horneada en el chrome; este ISButton transparente es solo su
+    -- zona de clic.
+    local cx, cy, cw, ch = self:zone(SKIN.titleClose)
+    self.closeButton = ISButton:new(cx, cy, cw, ch, "", self, LPComputer.onClose)
     self.closeButton:initialise(); self.closeButton:instantiate()
-    self.closeButton.backgroundColor = { r = WINFACE[1], g = WINFACE[2], b = WINFACE[3], a = 1 }
-    self.closeButton.borderColor = { r = 0, g = 0, b = 0, a = 1 }
-    self.closeButton.textColor = { r = 0.78, g = 0.16, b = 0.13, a = 1 }
+    self.closeButton.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.closeButton.backgroundColorMouseOver = { r = 0.85, g = 0.16, b = 0.13, a = 0.25 }
+    self.closeButton.borderColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.closeButton.textColor = { r = 0, g = 0, b = 0, a = 0 }
     self:addChild(self.closeButton)
 
-    -- Boton de accion: el visual lo dibujamos nosotros en paint() (para que
-    -- no se ponga negro al deshabilitarse ni pise nuestra paleta). El
-    -- ISButton queda transparente y solo sirve de zona de clic.
-    local aw, ah = 236, 36
-    self.actionRect = { x = win.x + win.w - aw - 24, y = win.y + win.h - ah - 22, w = aw, h = ah }
-    self.actionButton = ISButton:new(self.actionRect.x, self.actionRect.y, aw, ah, "", self, LPComputer.onAction)
+    -- Boton de accion: visual dibujado por nosotros; ISButton transparente
+    -- como zona de clic (no se pone negro al deshabilitarse).
+    local r = self.actionRect
+    self.actionButton = ISButton:new(r.x, r.y, r.w, r.h, "", self, LPComputer.onAction)
     self.actionButton:initialise(); self.actionButton:instantiate()
     self.actionButton.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
     self.actionButton.backgroundColorMouseOver = { r = 1, g = 1, b = 1, a = 0.06 }
@@ -333,17 +358,12 @@ end
 -- ---- entrada ---------------------------------------------------------
 
 function LPComputer:onMouseDown(x, y)
-    for _, hb in ipairs(self.appHitboxes) do
+    for _, hb in ipairs(self.appHitboxes or {}) do
         if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
             self.app = hb.id
             self:refreshAction()
             return true
         end
-    end
-    local win = self.win
-    if x < win.x or x > win.x + win.w or y < win.y or y > win.y + win.h then
-        self:onClose()
-        return true
     end
     if self.app == "misiones" then
         for _, hb in ipairs(self.rowHitboxes) do
@@ -353,6 +373,12 @@ function LPComputer:onMouseDown(x, y)
                 return true
             end
         end
+    end
+    -- clic dentro del panel pero fuera de la ventana horneada: cerrar
+    local wx, wy, ww, wh = self:zone(SKIN.win)
+    if x < wx or x > wx + ww or y < wy or y > wy + wh then
+        self:onClose()
+        return true
     end
     return ISPanel.onMouseDown(self, x, y)
 end
@@ -376,97 +402,35 @@ function LPComputer:prerender()
 end
 
 function LPComputer:paint()
-    if not self.win then self:layout() end
-    local win = self.win
+    if not self.s then self:layout() end
 
-    rect(self, 0, 0, self.width, self.statusY, DESKTOP)
-    self:renderRail()
-
-    -- marca de agua del escritorio: el logo si esta, si no el texto
-    local logo = tex("xcyos_logo.png")
-    if logo then
-        local lw = 320
-        local lh = lw * logo:getHeight() / logo:getWidth()
-        self:drawTextureScaled(logo, win.x + win.w + 30, math.floor(self.height / 2 - lh / 2), lw, lh, 0.9, 1, 1, 1)
+    -- CHROME de una sola pieza: bisel, escritorio, franja, marco, barra de
+    -- titulo con degradado, logo, vinneta, barra de estado.
+    local chrome = tex("xcyos_chrome.png")
+    if chrome then
+        self:drawTextureScaled(chrome, 0, 0, self.width, self.height, 1, 1, 1, 1)
     else
-        text(self, "XCYOS", win.x + win.w + 30, math.floor(self.height / 2) - 30, PHOSPHOR, UIFont.Large)
+        rect(self, 0, 0, self.width, self.height, DESKTOP)
     end
 
-    -- scanlines tenues sobre el escritorio (rects en orden, sin textura
-    -- grande que PZ componga al final y ensucie la ventana)
-    for sy = 0, self.statusY, 3 do
-        self:drawRect(0, sy, self.width, 1, 0.05, 0, 0, 0)
+    -- resaltado del icono activo de la barra lateral (unico chrome dinamico)
+    for i, app in ipairs(APPS) do
+        if self.app == app.id then
+            local rx, ry, rw, rh = self:zone(SKIN.rail[i])
+            self:drawRect(rx, ry, rw, rh, 0.14, PHOSPHOR[1], PHOSPHOR[2], PHOSPHOR[3])
+            self:drawRectBorder(rx, ry, rw, rh, 1, PH_DIM[1], PH_DIM[2], PH_DIM[3])
+        end
     end
 
-    -- ventana: sombra, relleno solido, bisel noventero (claro arriba/izq)
-    rect(self, win.x - 3, win.y - 3, win.w + 6, win.h + 6, { 0, 0, 0 }, 0.5)
-    rect(self, win.x, win.y, win.w, win.h, WINFACE)
-    self:drawRectBorder(win.x, win.y, win.w, win.h, 1, 0.04, 0.04, 0.03)
-    self:drawRect(win.x + 1, win.y + 1, win.w - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
-    self:drawRect(win.x + 1, win.y + 1, 1, win.h - 2, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
-
-    -- barra de titulo: degradado teal si esta el PNG, si no teal oscuro plano
-    local TB_H = 26
-    local gtitle = tex("grad_title.png")
-    if gtitle then
-        self:drawTextureScaled(gtitle, win.x + 2, win.y + 2, win.w - 4, TB_H, 1, 1, 1, 1)
-    else
-        rect(self, win.x + 2, win.y + 2, win.w - 4, TB_H, TITLE_BG)
-    end
-    self:drawRect(win.x + 2, win.y + 2 + TB_H, win.w - 4, 1, 1, 0, 0, 0)
-    drawIcon(self, IC.folder, win.x + 8, win.y + 5, 18, { 0.94, 0.82, 0.39 })
-    text(self, "LAST PURPOSE // ARCHIVO DE MISIONES", win.x + 32, win.y + 7, TITLE_INK)
-    drawIcon(self, IC.min, win.x + win.w - 74, win.y + 6, 16, TITLE_INK)
-    drawIcon(self, IC.max, win.x + win.w - 52, win.y + 6, 16, TITLE_INK)
-    -- (la X es un hijo ISButton)
-
-    local bx, by = win.x + 14, win.y + 38
-    local bw, bh = win.w - 28, win.h - 52
-
-    local function pane(px, py, pw, ph)
-        rect(self, px, py, pw, ph, PAGEFACE)
-        self:drawRectBorder(px, py, pw, ph, 1, WIN_LO[1], WIN_LO[2], WIN_LO[3])
-        self:drawRect(px + 1, py + 1, pw - 2, 1, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
-        self:drawRect(px + 1, py + 1, 1, ph - 2, 1, WIN_HI[1], WIN_HI[2], WIN_HI[3])
-    end
+    local lx, ly, lw = self:zone(SKIN.listPane)
+    local dx, dy, dw = self:zone(SKIN.detailPane)
 
     if self.app == "misiones" then
-        local listW = 250
-        pane(bx, by, listW, bh)
-        pane(bx + listW + 14, by, bw - listW - 14, bh)
-        self:renderList(bx + 12, by + 12, listW - 24)
-        self:renderDetail(bx + listW + 14 + 18, by + 16, bw - listW - 14 - 36)
+        self:renderList(lx, ly, lw)
+        self:renderDetail(dx, dy, dw)
         self:drawActionButton()
     else
-        pane(bx, by, bw, bh)
-        self:renderStub(bx + 22, by + 20, bw - 44)
-    end
-
-    -- barra de estado
-    rect(self, 0, self.statusY, self.width, 24, { 0.02, 0.13, 0.11 })
-    text(self, "XCYOS v1.0.3  |  LAST PURPOSE TERMINAL", 12, self.statusY + 5, PH_DIM)
-    textRight(self, "12:47  .  14/07/1993", self.width - 12, self.statusY + 5, PHOSPHOR)
-end
-
-function LPComputer:renderRail()
-    self.appHitboxes = {}
-    -- franja de colores
-    for i = 1, 4 do
-        rect(self, 0, 150 + (i - 1) * 7, RAIL_W - 8, 7, STRIPE[i])
-    end
-    local ry = 14
-    for _, app in ipairs(APPS) do
-        local active = self.app == app.id
-        if active then
-            rect(self, 4, ry, RAIL_W - 8, 52, { 0.075, 0.135, 0.125 })
-            self:drawRectBorder(4, ry, RAIL_W - 8, 52, 1, PH_DIM[1], PH_DIM[2], PH_DIM[3])
-        end
-        local c = active and { 0.918, 1.0, 0.965 } or { 0.706, 0.765, 0.737 }
-        appGlyph(self, app.id, 33, ry + 6, c)
-        local lw = measure(app.label, UIFont.Small)
-        text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 37, c)
-        table.insert(self.appHitboxes, { id = app.id, x = 4, y = ry, w = RAIL_W - 8, h = 52 })
-        ry = ry + 58
+        self:renderStub(lx, dy, (dx + dw) - lx)
     end
 end
 
