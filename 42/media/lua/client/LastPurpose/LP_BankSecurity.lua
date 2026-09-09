@@ -35,6 +35,12 @@ local EARLY_ALARM_WINDOW_THRESHOLD = 2
 
 local knownEntrances = {}
 
+-- Solo el cascaron exterior del edificio: las entradas interiores no hay
+-- que sellarlas, y evita barrer el volumen hueco del banco. KeyasZones ya
+-- escanea con este mismo margen; LP reutiliza SU lista (getEntries) en vez
+-- de volver a recorrer el edificio por su cuenta.
+local BANK_SHELL_TILES = 5
+
 local function isEntrance(object)
     if instanceof(object, "IsoWindow") or instanceof(object, "IsoDoor") then return true end
     if not instanceof(object, "IsoThumpable") then return false end
@@ -42,23 +48,17 @@ local function isEntrance(object)
     return ok and result == true
 end
 
-local function eachEntranceInPerimeter(callback)
+-- Refresca la zona de KeyasZones y recorre SUS entradas ya clasificadas.
+-- Sustituye al antiguo triple bucle propio sobre todo el perimetro.
+local function eachEntrance(callback)
+    if not (KeyasZones and KeyasZones.getEntries) then return 0 end
+    pcall(function() KeyasZones.rescan("knox_bank_seal") end)
+    local list = KeyasZones.getEntries("knox_bank_seal")
     local count = 0
-    for z = PERIMETER().minZ, PERIMETER().maxZ do
-        for y = PERIMETER().minY, PERIMETER().maxY do
-            for x = PERIMETER().minX, PERIMETER().maxX do
-                local square = getCell():getGridSquare(x, y, z)
-                local objects = square and square:getObjects()
-                if objects then
-                    for i = 0, objects:size() - 1 do
-                        local object = objects:get(i)
-                        if object and isEntrance(object) then
-                            count = count + 1
-                            callback(object)
-                        end
-                    end
-                end
-            end
+    for _, e in ipairs(list) do
+        if e.ref then
+            count = count + 1
+            callback(e.ref)
         end
     end
     return count
@@ -85,6 +85,7 @@ local function ensureBankZone()
     if not p then return end
     local ok = KeyasZones.register("knox_bank_seal", {
         bbox = { minX = p.minX, maxX = p.maxX, minY = p.minY, maxY = p.maxY, minZ = p.minZ, maxZ = p.maxZ },
+        shell = BANK_SHELL_TILES,
         active = function()
             return shouldRemainProtected(LastPurpose.getPlayerSafe(0))
         end,
@@ -230,9 +231,10 @@ function LastPurpose.updateBankSecurity()
     end
 
     -- Se reconstruye siempre, incluso de noche: la cache Lua se pierde al
-    -- cargar una partida guardada.
+    -- cargar una partida guardada. Ahora sale de la lista de KeyasZones
+    -- (cascaron exterior), no de un barrido propio del volumen.
     knownEntrances = {}
-    local count = eachEntranceInPerimeter(function(object)
+    local count = eachEntrance(function(object)
         knownEntrances[object] = true
         local md = object:getModData()
         if instanceof(object, "IsoWindow") and md.LastPurposeWindowWasSmashed == nil then
