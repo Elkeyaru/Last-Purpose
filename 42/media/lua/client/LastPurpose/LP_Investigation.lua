@@ -185,9 +185,10 @@ function LastPurpose.updateInvestigation(player)
         data.cluePickedUp = true
         data.clueHeldSinceHours = data.clueHeldSinceHours or player:getHoursSurvived()
         local heldHours = player:getHoursSurvived() - (data.clueHeldSinceHours or 0)
-        local NOTE_READ_HOURS = 0.01  -- un momento con la nota en mano; la
-                                      -- comprobacion corre 1x/minuto de juego,
-                                      -- asi confirma al 2o tick tras recogerla.
+        -- Rato leyendo la nota: ~10 s reales a velocidad normal (1 min de
+        -- juego ~ 3 s reales -> ~3.3 min de juego). La comprobacion corre
+        -- 1x/minuto de juego, asi que confirma unos 3-4 ticks tras recogerla.
+        local NOTE_READ_HOURS = 0.055
 
         if not (LastPurpose.hasReadClueNote(player, note) or heldHours >= NOTE_READ_HOURS) then
             if not data.clueReadHintShown then
