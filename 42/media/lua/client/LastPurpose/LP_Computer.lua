@@ -7,30 +7,26 @@ require "KeyasLib/KeyasCSS"
 -- ---------------------------------------------------------------------------
 -- LP_Computer.lua - Hito 1 del hub del ordenador (roadmap punto 2).
 --
--- La mesa de planificacion es "la mesa con ordenador": misma pieza, misma
--- receta salvo que ahora pide chatarra electronica. Su menu contextual abre
--- esta GUI, un archivo de misiones estilo SO retro. Por ahora es de SOLO
--- LECTURA: lista el catalogo y, en la etapa review_loot, entrega el botin
--- llamando a LastPurpose.reviewHeistLoot (ese flujo no se reescribio). El
--- diario (tecla J) sigue aparte para prologo/mision activa.
+-- La mesa de planificacion es "la mesa con ordenador". Su menu contextual
+-- abre esta GUI, un archivo de misiones estilo SO retro. Por ahora es de
+-- SOLO LECTURA: lista el catalogo y, en la etapa review_loot, entrega el
+-- botin (LastPurpose.reviewHeistLoot). El diario (tecla J) sigue aparte.
 --
--- ESTRUCTURA (desde v1.2.x):
---   * El CHROME fijo (bisel CRT, escritorio, marco de ventana, barra de
---     titulo con degradado, franja, logo, vinneta, barra de estado) se
---     dibuja de una sola pieza desde xcyos_chrome.png -> arte horneado.
---   * El CONTENIDO (lista de misiones, panel de detalle, badges, tiles de
---     recompensa, apps Notas/Archivos/Sistema) se describe como un arbol de
---     cajas con hoja de estilos y lo maqueta/pinta KeyasCSS (KeyasLib).
---     Esquinas redondeadas, degradados y sombras que ISUI no dibuja salen
---     de KeyasCSS. Ver KeyasLib/MIGRATION.md seccion 0.
+-- ESTRUCTURA:
+--   * CHROME fijo -> xcyos_chrome.png horneado (bisel CRT, marco, barra de
+--     titulo, rail, barra de estado, logo, vinneta). Ver docs/GUI_ASSETS.md.
+--   * CONTENIDO -> arbol de cajas + hoja de estilos (CONTENT_CSS) que
+--     maqueta y pinta KeyasCSS (KeyasLib >= 1.2.3): flexbox, esquinas
+--     redondeadas, bordes, sombras. Iconos y mini-mapa por hooks onPaint.
+--   * FUENTES -> atlas de glifos horneados con tools/bake_fonts.ps1
+--     (Bahnschrift / Consolas), registrados en KeyasUI. 4 tamanos con
+--     jerarquia: ui14 etiqueta, ui18 cuerpo, ui30 titulo, mono16 numeros.
 -- ---------------------------------------------------------------------------
 
 LastPurpose = LastPurpose or {}
 
 local REDACTED = "?????????"
 
--- Catalogo de PANTALLA. El unico golpe "real" hoy es louisville_knox_bank
--- (vive en LastPurpose.HEISTS); el resto se muestra censurado.
 local CATALOG = {
     { city = "LOUISVILLE", rows = {
         { id = "louisville_knox_bank", name = "El ultimo golpe", unlocked = true },
@@ -56,22 +52,16 @@ local APPS = {
     { id = "sistema",  label = "SISTEMA" },
 }
 
--- Paleta terminal. Hex exactos del mockup XCYOS (una sola: es una pantalla
--- dentro del juego, sin tema claro/oscuro).
-local SCREEN    = { 0.043, 0.059, 0.051 }
+-- Paleta terminal (hex del mockup XCYOS).
 local DESKTOP   = { 0.106, 0.125, 0.118 }
 local WINFACE   = { 0.725, 0.714, 0.678 }
-local WIN_HI    = { 0.933, 0.925, 0.894 }
-local WIN_LO    = { 0.427, 0.416, 0.380 }
 local INK       = { 0.086, 0.086, 0.059 }
-local INK_SOFT  = { 0.290, 0.278, 0.235 }
 local PHOSPHOR  = { 0.184, 0.906, 0.769 }
 local PH_DIM    = { 0.110, 0.561, 0.486 }
 local OKC       = { 0.337, 0.706, 0.353 }
 local AMBER     = { 1.000, 0.714, 0.290 }
 local LOCKC     = { 0.486, 0.478, 0.439 }
 
--- Texturas (assets/Gemini procesados). Cada una tiene fallback dibujado.
 local TEX_DIR = "media/ui/LastPurpose/"
 local texCache = {}
 local function tex(name)
@@ -90,8 +80,7 @@ local IC = {
     min = 14, max = 15, close = 16,
 }
 
--- Dibuja un icono de la hoja procesada, tintado con `c`. Fallback: glifo de
--- rectangulos. (Se usa desde los hooks onPaint del arbol KeyasCSS.)
+-- Dibuja un icono de la hoja procesada, tintado. Fallback: glifo de rects.
 local function drawIcon(self, n, x, y, size, c)
     local t = icon(n)
     if t then
@@ -106,19 +95,24 @@ local FONTS_REGISTERED = false
 local function ensureFontsRegistered()
     if FONTS_REGISTERED then return end
     if not (KeyasUI and KeyasUI.registerFont and LP_TermFontData) then return end
-    KeyasUI.registerFont("lp_term_18", {
-        atlasPath = "media/ui/LastPurpose/lp_term_18_0.png",
-        metrics = LP_TermFontData[18], size = 18,
-    })
-    KeyasUI.registerFont("lp_term_26", {
-        atlasPath = "media/ui/LastPurpose/lp_term_26_0.png",
-        metrics = LP_TermFontData[26], size = 26,
-    })
+    local function reg(id, key, size, fb)
+        local m = LP_TermFontData[key]
+        if not m then return end
+        KeyasUI.registerFont(id, {
+            atlasPath = "media/ui/LastPurpose/" .. id .. ".png",
+            metrics = m, size = size, fallbackFont = fb,
+        })
+    end
+    reg("lp_ui_14",   "ui14",   14, UIFont and UIFont.Small)
+    reg("lp_ui_18",   "ui18",   18, UIFont and UIFont.Medium)
+    reg("lp_ui_30",   "ui30",   30, UIFont and UIFont.Large)
+    reg("lp_mono_16", "mono16", 16, UIFont and UIFont.Small)
     FONTS_REGISTERED = true
 end
 
 -- ---- estado de la mision ------------------------------------------------
 
+-- devuelve: labelBadge, colorBadge, textoBoton, habilitado
 local function knoxStatus(data)
     if LastPurpose.stageIs(data, "completed") then
         return "ARCHIVADA", OKC, "Archivada", false
@@ -136,42 +130,42 @@ end
 local BAKE_W, BAKE_H = 1920, 1080
 local SKIN = {
     win        = { 172, 60, 1372, 918 },
-    content    = { 202, 116, 1306, 812 },   -- listPane .. detailPane en una sola caja para KeyasCSS
-    titleClose = { 1516, 62, 24, 26 },
-    rail       = { { 22, 22, 128, 88 }, { 22, 140, 128, 88 }, { 22, 258, 128, 88 }, { 22, 376, 128, 88 } },
+    content    = { 202, 112, 1310, 828 },   -- area que pinta KeyasCSS (ver docs/GUI_ASSETS.md)
+    titleClose = { 1500, 62, 40, 30 },
+    rail       = { { 20, 40, 132, 92 }, { 20, 150, 132, 92 }, { 20, 262, 132, 92 }, { 20, 374, 132, 92 } },
 }
 
--- Hoja de estilos del CONTENIDO. Se escribe en el espacio del PNG (1920) y
--- KeyasCSS.parse la escala por self.s en layout(). Colores = hex del mockup.
+-- Hoja de estilos del CONTENIDO. Escrita en espacio 1920; KeyasCSS.parse la
+-- escala por self.s en layout(). Un color de panel algo mas oscuro que la
+-- cara de la ventana + borde visible + una sombra suave = profundidad sin
+-- biseles inset (que ISUI no tiene).
 local CONTENT_CSS = [[
-  .root { display: flex; flex-direction: row; gap: 14px; }
+  .root { display: flex; flex-direction: row; gap: 16px; height: 100%; }
 
-  .list-pane {
-    width: 300px; background: #cbc8bf; border: 1px solid #6d6a61;
-    border-radius: 4px; overflow: hidden; padding: 12px 6px 12px 12px;
-    display: flex; flex-direction: column;
+  .pane {
+    background: #c4c1b6; border: 2px solid #6d6a61; border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+    overflow: hidden; height: 100%; display: flex; flex-direction: column;
   }
-  .detail-pane {
-    flex-grow: 1; background: #cbc8bf; border: 1px solid #6d6a61;
-    border-radius: 4px; overflow: hidden; padding: 20px 22px;
-    display: flex; flex-direction: column;
-  }
+  .list-pane { width: 320px; padding: 14px 8px 14px 14px; }
+  .detail-pane { flex-grow: 1; padding: 22px 26px; }
 
-  .city { display: flex; flex-direction: column; margin-top: 14px; }
-  .city-title { font: lp_term_18; color: #16160f; padding-bottom: 3px; }
+  .city { display: flex; flex-direction: column; margin-top: 16px; }
+  .city.first { margin-top: 2px; }
+  .city-title { font: lp_ui_14; color: #16160f; padding-bottom: 4px; }
   .rule { height: 2px; background: #16160f; }
-  .rule-soft { height: 1px; background: #6d6a61; margin-bottom: 8px; }
-  .city-hint { font: lp_term_18; color: #7c7a70; margin-top: 6px; }
+  .rule-soft { height: 1px; background: #8f8c82; }
+  .city-hint { font: lp_ui_14; color: #7c7a70; margin-top: 7px; }
 
-  .missions { display: flex; flex-direction: column; margin-top: 4px; }
+  .missions { display: flex; flex-direction: column; margin-top: 6px; }
   .m-row {
-    display: flex; flex-direction: row; align-items: center; gap: 8px;
-    padding: 5px 10px 5px 9px; border-radius: 4px;
-    border: 1px solid transparent; font: lp_term_18; color: #16160f;
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+    padding: 7px 10px 7px 10px; border-radius: 5px;
+    border: 1px solid transparent; font: lp_ui_18; color: #16160f;
   }
-  .m-row .num { width: 22px; color: #4a473c; }
+  .m-row .num { width: 26px; font: lp_mono_16; color: #4a473c; }
   .m-row .m-name { flex-grow: 1; }
-  .m-row .dot { width: 10px; height: 10px; border-radius: 5px; }
+  .m-row .dot { width: 11px; height: 11px; border-radius: 6px; }
   .dot.ok    { background: #56b45a; }
   .dot.prog  { background: #ffb64a; }
   .dot.lock  { background: #7c7a70; }
@@ -179,41 +173,64 @@ local CONTENT_CSS = [[
   .m-row.locked { color: #7c7a70; }
   .m-row.locked .num { color: #7c7a70; }
   .m-row.sel {
-    background: #2f3f3a; color: #eafffb; border: 1px solid #2fe7c4;
+    background: #223330; color: #eafffb;
+    border: 1px solid #2fe7c4;
   }
   .m-row.sel .num { color: #2fe7c4; }
 
-  .d-head { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
-  .d-title { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
-  .d-name { font: lp_term_26; color: #16160f; }
-  .d-city { font: lp_term_18; color: #4a473c; }
+  .d-head { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; }
+  .d-title { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+  .d-name { font: lp_ui_30; color: #16160f; }
+  .d-city { font: lp_ui_14; color: #4a473c; }
   .badge {
-    font: lp_term_18; padding: 4px 10px; border-radius: 3px;
-    border: 1px solid #4a473c;
+    font: lp_ui_14; padding: 6px 12px; border-radius: 4px;
+    border: 1px solid #16160f;
   }
 
-  .sec { margin-top: 22px; display: flex; flex-direction: column; }
-  .sec-h { font: lp_term_18; color: #16160f; padding-bottom: 4px; }
-  .grid { display: flex; flex-direction: row; gap: 18px; align-items: flex-start; }
-  .body { font: lp_term_18; color: #16160f; line-height: 24px; flex-grow: 1; }
-  .body-soft { font: lp_term_18; color: #4a473c; line-height: 24px; margin-top: 10px; }
+  .sec { margin-top: 24px; display: flex; flex-direction: column; }
+  .sec-h { font: lp_ui_14; color: #16160f; padding-bottom: 5px; }
+  .sec .rule-soft { margin-bottom: 10px; }
+  .grid { display: flex; flex-direction: row; gap: 22px; align-items: flex-start; }
+  .body { font: lp_ui_18; color: #16160f; line-height: 26px; flex-grow: 1; }
+  .body-soft { font: lp_ui_14; color: #4a473c; line-height: 22px; margin-top: 12px; }
 
-  .map { width: 240px; height: 200px; border: 1px solid #16160f;
-         border-radius: 3px; background: #d0cdc3; }
+  .map {
+    width: 260px; height: 210px; border: 2px solid #16160f;
+    border-radius: 4px; background: #d0cdc3;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
 
-  .reward { display: flex; flex-direction: row; gap: 12px; margin-top: 6px; }
+  .reward { display: flex; flex-direction: row; gap: 14px; margin-top: 8px; }
   .tile {
-    width: 128px; padding: 10px 6px 8px; border: 1px solid #16160f;
-    border-radius: 4px; background: #b9b6ad;
-    box-shadow: 3px 3px 0 rgba(22,22,15,0.55);
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 138px; padding: 12px 8px 10px; border: 2px solid #16160f;
+    border-radius: 6px; background: #b9b6ad;
+    box-shadow: 4px 4px 0 rgba(22,22,15,0.65);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
   }
   .tile .ic { width: 40px; height: 34px; }
+  .tile .val { font: lp_mono_16; color: #16160f; }
+  .tile .cap { font: lp_ui_14; color: #4a473c; }
 
-  .stub { flex-grow: 1; background: #cbc8bf; border: 1px solid #6d6a61;
-          border-radius: 4px; padding: 22px 26px; display: flex; flex-direction: column; }
-  .stub h { font: lp_term_26; color: #16160f; }
-  .stub p { font: lp_term_18; color: #4a473c; line-height: 24px; margin-top: 12px; }
+  .action-row { display: flex; flex-direction: row; margin-top: 26px; }
+  .cta {
+    display: flex; flex-direction: row; align-items: center; gap: 14px;
+    padding: 12px 20px 12px 12px;
+    border: 2px solid #16160f; border-radius: 4px; background: #cbc8bf;
+    box-shadow: 4px 4px 0 rgba(22,22,15,1);
+    font: lp_ui_18; color: #16160f;
+  }
+  .cta .ic { width: 30px; height: 30px; }
+  .cta.on { background: #bff2e8; }
+  .cta.off { opacity: 0.5; }
+
+  .stub { flex-grow: 1; display: flex; flex-direction: column; }
+  .stub .h { font: lp_ui_30; color: #16160f; }
+  .stub .p { font: lp_ui_18; color: #4a473c; line-height: 26px; margin-top: 14px; }
+  .stub .k {
+    font: lp_mono_16; color: #16160f; margin-top: 16px;
+    border: 1px solid #16160f; border-radius: 3px; background: #cbc8bf;
+    padding: 6px 12px;
+  }
 ]]
 
 -- ---------------------------------------------------------------------------
@@ -222,9 +239,9 @@ LPComputer = ISPanel:derive("LPComputer")
 
 function LPComputer:new()
     local sw, sh = getCore():getScreenWidth(), getCore():getScreenHeight()
-    -- Panel con la MISMA proporcion que el PNG (16:9), centrado, ~95% de la
-    -- pantalla. No es del tamano de la pantalla -> PZ no pausa ni oscurece.
-    local scale = math.min(sw * 0.95 / BAKE_W, sh * 0.95 / BAKE_H)
+    -- ~90% de la pantalla, misma proporcion que el PNG, centrado. Por debajo
+    -- del tamano de pantalla -> PZ no oscurece el juego.
+    local scale = math.min(sw * 0.90 / BAKE_W, sh * 0.90 / BAKE_H)
     local w = math.floor(BAKE_W * scale)
     local h = math.floor(BAKE_H * scale)
     local o = ISPanel:new(math.floor((sw - w) / 2), math.floor((sh - h) / 2), w, h)
@@ -251,9 +268,6 @@ function LPComputer:layout()
         local rx, ry, rw, rh = self:zone(SKIN.rail[i])
         self.appHitboxes[i] = { id = app.id, x = rx, y = ry, w = rw, h = rh }
     end
-    local dx, dy, dw, dh = self:zone(SKIN.content)
-    self.actionRect = { x = dx + dw - 240, y = dy + dh + math.floor(8 * self.s), w = 228, h = 36 }
-    -- (Re)parsea la hoja a la escala actual.
     self.sheet = KeyasCSS.parse(CONTENT_CSS, { scale = self.s })
 end
 
@@ -266,20 +280,19 @@ local function paintIcon(name)
     end
 end
 
--- Mini-mapa estilizado con primitivas (el mockup usa un SVG).
 local function paintMap(label)
     return function(node, owner, x, y, w, h)
-        owner:drawRect(x, y, w, h, 1, 0.812, 0.796, 0.749)
+        owner:drawRect(x, y, w, h, 1, 0.816, 0.804, 0.765)
         local gc = { 0.55, 0.53, 0.49 }
-        for gx = x + 16, x + w - 8, 26 do owner:drawRect(gx, y + 2, 1, h - 4, 1, gc[1], gc[2], gc[3]) end
-        for gy = y + 16, y + h - 8, 24 do owner:drawRect(x + 2, gy, w - 4, 1, 1, gc[1], gc[2], gc[3]) end
-        owner:drawRect(x + 6, y + math.floor(h * 0.62), math.floor(w * 0.5), 2, 1, 0.42, 0.40, 0.36)
+        for gx = x + 18, x + w - 8, 28 do owner:drawRect(gx, y + 3, 1, h - 6, 1, gc[1], gc[2], gc[3]) end
+        for gy = y + 18, y + h - 8, 26 do owner:drawRect(x + 3, gy, w - 6, 1, 1, gc[1], gc[2], gc[3]) end
+        owner:drawRect(x + 8, y + math.floor(h * 0.62), math.floor(w * 0.5), 2, 1, 0.42, 0.40, 0.36)
         local ox, oy = x + math.floor(w * 0.52), y + math.floor(h * 0.42)
-        owner:drawRectBorder(ox - 8, oy - 7, 16, 14, 1, 0.36, 0.35, 0.31)
-        owner:drawRect(ox + 18, oy + 8, 1, 22, 1, INK[1], INK[2], INK[3])
-        owner:drawRect(ox + 8, oy + 18, 22, 1, 1, INK[1], INK[2], INK[3])
-        owner:drawRectBorder(ox + 12, oy + 12, 14, 14, 1, INK[1], INK[2], INK[3])
-        KeyasUI.text(owner, tostring(label or ""), x + 6, y + 4, { r = 0.16, g = 0.16, b = 0.13, a = 1 }, "lp_term_18")
+        owner:drawRectBorder(ox - 9, oy - 8, 18, 16, 1, 0.36, 0.35, 0.31)
+        owner:drawRect(ox + 20, oy + 9, 1, 24, 1, INK[1], INK[2], INK[3])
+        owner:drawRect(ox + 9, oy + 20, 24, 1, 1, INK[1], INK[2], INK[3])
+        owner:drawRectBorder(ox + 13, oy + 13, 15, 15, 1, INK[1], INK[2], INK[3])
+        KeyasUI.text(owner, tostring(label or ""), x + 8, y + 6, { r = 0.16, g = 0.16, b = 0.13, a = 1 }, "lp_ui_14")
     end
 end
 
@@ -297,23 +310,22 @@ end
 local function dotClass(label)
     if label == "ARCHIVADA" then return "ok"
     elseif label == "BOTIN PENDIENTE" then return "claim"
-    elseif label == "EN CURSO" then return "prog"
-    elseif label == "EN PREPARACION" then return "prog" end
-    return "ok"
+    elseif label == "EN CURSO" then return "prog" end
+    return "prog"
 end
 
 function LPComputer:listPaneNode()
     local player = LastPurpose.getPlayerSafe(0)
     local data = player and LastPurpose.getData(player)
     local children = {}
-    for _, group in ipairs(CATALOG) do
+    for gi, group in ipairs(CATALOG) do
         local rows = {}
         for i, row in ipairs(group.rows) do
             local sel = row.id == self.selectedId
             local cls = "m-row"
             if not row.unlocked then cls = cls .. " locked" end
             if sel then cls = cls .. " sel" end
-            local dot = row.unlocked and (data and dotClass((knoxStatus(data))) or "ok") or "lock"
+            local dot = row.unlocked and (data and dotClass((knoxStatus(data))) or "prog") or "lock"
             local rid = row.id
             rows[#rows + 1] = { tag = "div", class = cls, key = rid,
                 onClick = function()
@@ -333,18 +345,18 @@ function LPComputer:listPaneNode()
         }
         if group.hint then kids[#kids + 1] = { tag = "div", class = "city-hint", text = group.hint } end
         kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
-        children[#children + 1] = { tag = "div", class = "city", children = kids }
+        children[#children + 1] = { tag = "div", class = (gi == 1) and "city first" or "city", children = kids }
     end
-    return { tag = "div", class = "list-pane", children = children }
+    return { tag = "div", class = "pane list-pane", children = children }
 end
 
 function LPComputer:detailPaneNode()
     local player = LastPurpose.getPlayerSafe(0)
     local row, group = self:selectedRow()
-    if not row then return { tag = "div", class = "detail-pane" } end
+    if not row then return { tag = "div", class = "pane detail-pane" } end
 
     if not row.unlocked then
-        return { tag = "div", class = "detail-pane", children = {
+        return { tag = "div", class = "pane detail-pane", children = {
             { tag = "div", class = "d-head", children = {
                 { tag = "div", class = "d-title", children = {
                     { tag = "div", class = "d-name", text = REDACTED },
@@ -362,15 +374,16 @@ function LPComputer:detailPaneNode()
 
     local heist = LastPurpose.getHeist(row.id)
     local data = player and LastPurpose.getData(player)
-    local label, color = "DISPONIBLE", PH_DIM
-    if data then label, color = knoxStatus(data) end
-    local function hex255(r, g, b) return string.format("#%02x%02x%02x",
+    local label, color, ctaText, ctaOn = "DISPONIBLE", PH_DIM, "En preparacion", false
+    if data then label, color, ctaText, ctaOn = knoxStatus(data) end
+
+    local function hx(r, g, b) return string.format("#%02x%02x%02x",
         math.max(0, math.min(255, math.floor(r))), math.max(0, math.min(255, math.floor(g))),
         math.max(0, math.min(255, math.floor(b)))) end
     local badgeStyle = {
-        color         = hex255(color[1] * 128, color[2] * 128, color[3] * 128),
-        backgroundColor = hex255((color[1] * 0.35 + 0.62) * 255, (color[2] * 0.35 + 0.62) * 255, (color[3] * 0.35 + 0.62) * 255),
-        borderColor   = hex255(color[1] * 153, color[2] * 153, color[3] * 153),
+        color         = hx(color[1] * 120, color[2] * 120, color[3] * 120),
+        backgroundColor = hx((color[1] * 0.3 + 0.66) * 255, (color[2] * 0.3 + 0.66) * 255, (color[3] * 0.3 + 0.66) * 255),
+        borderColor   = hx(color[1] * 140, color[2] * 140, color[3] * 140),
     }
 
     local tiles = {}
@@ -378,12 +391,21 @@ function LPComputer:detailPaneNode()
     for _, t in ipairs(tileData) do
         tiles[#tiles + 1] = { tag = "div", class = "tile", children = {
             { tag = "div", class = "ic", onPaint = paintIcon(t[1]) },
-            { tag = "div", text = t[2], style = { font = "lp_term_18", color = "#16160f" } },
-            { tag = "div", text = t[3], style = { font = "lp_term_18", color = "#4a473c" } },
+            { tag = "div", class = "val", text = t[2] },
+            { tag = "div", class = "cap", text = t[3] },
         }}
     end
 
-    return { tag = "div", class = "detail-pane", children = {
+    local cta = { tag = "div", class = "action-row", children = {
+        { tag = "div", class = ctaOn and "cta on" or "cta off",
+          onClick = ctaOn and function() self:onAction() end or nil,
+          children = {
+              { tag = "div", class = "ic", onPaint = paintIcon("finger") },
+              { tag = "div", text = ctaText },
+          } },
+    }}
+
+    return { tag = "div", class = "pane detail-pane", children = {
         { tag = "div", class = "d-head", children = {
             { tag = "div", class = "d-title", children = {
                 { tag = "div", class = "d-name", text = row.name },
@@ -396,7 +418,7 @@ function LPComputer:detailPaneNode()
             { tag = "div", class = "rule-soft" },
             { tag = "div", class = "grid", children = {
                 { tag = "div", class = "body", text = (heist and heist.mission)
-                    or "Adelantarse a la competencia. El banco mas grande de Kentucky." },
+                    or "Adelantarse a la competencia. El banco mas grande de Kentucky, con la camara acorazada llena y las alarmas caidas por la evacuacion." },
                 { tag = "div", class = "map", onPaint = paintMap((group and group.city) or "LOUISVILLE") },
             }},
         }},
@@ -406,11 +428,12 @@ function LPComputer:detailPaneNode()
             { tag = "div", class = "reward", children = tiles },
             { tag = "div", class = "body-soft", text = "5 lingotes de oro, 4 diamantes, 6 fajos, suministros de mid-game, municion y 2 niveles de Destreza." },
         }},
+        cta,
     }}
 end
 
 function LPComputer:stubNode()
-    local title, body
+    local title, body, key
     if self.app == "notas" then
         title = "NOTAS"
         body = "Las notas cifradas que recogiste en el mundo aparecen aca una vez leidas. El diario de mision (tecla J) sigue siendo aparte: solo se abre en el prologo y con una mision activa."
@@ -419,13 +442,16 @@ function LPComputer:stubNode()
         body = "Intel acumulada: planos parciales del Knox Bank, contacto de la radio, catalogo de golpes de Louisville. La mesa con ordenador fija tu refugio."
     else
         title = "SISTEMA"
-        body = "Tecla del diario: J  (Opciones > Mods > Last Purpose).\nRegistro de depuracion: " ..
-            (LastPurpose.DEBUG and "SI" or "NO") .. ".\nXCYOS v1.0.3  -  Last Purpose Terminal."
+        body = "Opciones del mod (Opciones > Mods > Last Purpose). El registro de depuracion esta " ..
+            (LastPurpose.DEBUG and "activado" or "desactivado") .. ". XCYOS v1.0.3 - Last Purpose Terminal."
+        key = "Tecla del diario:  J"
     end
-    return { tag = "div", class = "stub", children = {
+    local kids = {
         { tag = "div", class = "h", text = title },
         { tag = "div", class = "p", text = body },
-    }}
+    }
+    if key then kids[#kids + 1] = { tag = "div", class = "k", text = key } end
+    return { tag = "div", class = "pane detail-pane", children = { { tag = "div", class = "stub", children = kids } } }
 end
 
 function LPComputer:contentTree()
@@ -435,7 +461,7 @@ function LPComputer:contentTree()
     return { tag = "div", class = "root", children = { self:stubNode() } }
 end
 
--- ---- botones (hijos ISButton) -------------------------------------
+-- ---- botones (solo la X; el CTA vive en el arbol) -----------------
 
 function LPComputer:createChildren()
     ISPanel.createChildren(self)
@@ -450,50 +476,11 @@ function LPComputer:createChildren()
     self.closeButton.borderColor = { r = 0, g = 0, b = 0, a = 0 }
     self.closeButton.textColor = { r = 0, g = 0, b = 0, a = 0 }
     self:addChild(self.closeButton)
-
-    local r = self.actionRect
-    self.actionButton = ISButton:new(r.x, r.y, r.w, r.h, "", self, LPComputer.onAction)
-    self.actionButton:initialise(); self.actionButton:instantiate()
-    self.actionButton.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
-    self.actionButton.backgroundColorMouseOver = { r = 1, g = 1, b = 1, a = 0.06 }
-    self.actionButton.borderColor = { r = 0, g = 0, b = 0, a = 0 }
-    self.actionButton.textColor = { r = 0, g = 0, b = 0, a = 0 }
-    self:addChild(self.actionButton)
-
-    self:refreshAction()
 end
 
 function LPComputer:refreshAction()
-    local player = LastPurpose.getPlayerSafe(0)
-    local row = self:selectedRow()
-    local show = self.app == "misiones"
-    if self.actionButton then self.actionButton:setVisible(show) end
-    self.showAction = show
-    if not show then return end
-    if not player or not row or not row.unlocked then
-        self.actionLabel, self.actionEnabled = "Bloqueada", false
-    else
-        local _, _, actionText, enabled = knoxStatus(LastPurpose.getData(player))
-        self.actionLabel, self.actionEnabled = actionText, (enabled == true)
-    end
-    if self.actionButton then self.actionButton:setEnable(self.actionEnabled) end
-end
-
-function LPComputer:drawActionButton()
-    if not self.showAction or not self.actionRect then return end
-    local r = self.actionRect
-    local on = self.actionEnabled
-    local a = on and 1 or 0.55
-    KeyasCSS.dropShadow(self, r.x, r.y, r.w, r.h, 4,
-        { x = 3, y = 3, blur = 2, color = { r = INK[1], g = INK[2], b = INK[3], a = 0.5 * a } })
-    KeyasCSS.roundedRect(self, r.x, r.y, r.w, r.h, 4, { r = WINFACE[1], g = WINFACE[2], b = WINFACE[3], a = a })
-    if on then KeyasCSS.roundedRect(self, r.x, r.y, r.w, r.h, 4, { r = PHOSPHOR[1], g = PHOSPHOR[2], b = PHOSPHOR[3], a = 0.22 }) end
-    self:drawRectBorder(r.x, r.y, r.w, r.h, a, INK[1], INK[2], INK[3])
-    drawIcon(self, IC.finger, r.x + 8, r.y + 4, 28, INK)
-    local lbl = self.actionLabel or ""
-    local lw = (KeyasUI and KeyasUI.measure and (KeyasUI.measure(lbl, "lp_term_18"))) or 0
-    KeyasUI.text(self, lbl, r.x + 44 + math.floor((r.w - 44 - lw) / 2), r.y + 9,
-        { r = INK[1], g = INK[2], b = INK[3], a = 1 }, "lp_term_18")
+    -- El CTA se reconstruye con el arbol cada frame; nada que hacer aqui,
+    -- pero se conserva el metodo porque lo llaman los onClick de las filas.
 end
 
 function LPComputer:onAction()
@@ -504,8 +491,6 @@ function LPComputer:onAction()
     if not ok then print("[LastPurpose] ERROR al entregar el botin desde el ordenador") end
     if LastPurpose.stageIs(LastPurpose.getData(player), "completed") then
         self:onClose()
-    else
-        self:refreshAction()
     end
 end
 
@@ -521,11 +506,9 @@ function LPComputer:onMouseDown(x, y)
     for _, hb in ipairs(self.appHitboxes or {}) do
         if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
             self.app = hb.id
-            self:refreshAction()
             return true
         end
     end
-    -- contenido: delega en el arbol KeyasCSS del ultimo frame
     if self._contentTree then
         local n = self._contentTree:hit(x, y)
         if n and n.onClick then
@@ -568,16 +551,14 @@ function LPComputer:paint()
         self:drawRect(0, 0, self.width, self.height, 1, DESKTOP[1], DESKTOP[2], DESKTOP[3])
     end
 
-    -- resaltado del icono activo de la barra lateral
     for i, app in ipairs(APPS) do
         if self.app == app.id then
             local rx, ry, rw, rh = self:zone(SKIN.rail[i])
-            self:drawRect(rx, ry, rw, rh, 0.14, PHOSPHOR[1], PHOSPHOR[2], PHOSPHOR[3])
+            self:drawRect(rx, ry, rw, rh, 0.16, PHOSPHOR[1], PHOSPHOR[2], PHOSPHOR[3])
             self:drawRectBorder(rx, ry, rw, rh, 1, PH_DIM[1], PH_DIM[2], PH_DIM[3])
         end
     end
 
-    -- CONTENIDO: arbol KeyasCSS maquetado en la zona de contenido.
     local cx, cy, cw, chh = self:zone(SKIN.content)
     local ok, tree = pcall(function()
         local t = KeyasCSS.node(self:contentTree())
@@ -586,9 +567,7 @@ function LPComputer:paint()
         t:paint(self)
         return t
     end)
-    if ok then self._contentTree = tree else self._contentTree = nil end
-
-    if self.app == "misiones" then self:drawActionButton() end
+    self._contentTree = ok and tree or nil
 end
 
 -- ---- apertura desde el menu contextual de la mesa ---------------
@@ -602,7 +581,6 @@ function LastPurpose.openComputer(player)
         local p = LPComputer:new()
         p:initialise()
         p:instantiate()
-        p:setAlwaysOnTop(true)
         p:addToUIManager()
         return p
     end)
