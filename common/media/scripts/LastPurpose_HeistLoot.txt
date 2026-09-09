@@ -5,10 +5,10 @@ module LastPurpose
         DisplayCategory = Bag,
         ItemType = base:normal,
         Weight = 12.0,
-        Icon = Duffelbag,
+        IconsForTexture = DuffelBag_Grey,
         ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
         ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
-        WorldStaticModel = DuffelBag_Ground,
+        WorldStaticModel = LastPurposeLootBagGround,
     }
 
     item OpenKnoxBankLootBag
@@ -16,7 +16,7 @@ module LastPurpose
         DisplayCategory = Bag,
         ItemType = base:container,
         Weight = 2.0,
-        Icon = Duffelbag,
+        IconsForTexture = DuffelBag_Grey,
         CanBeEquipped = base:back,
         CanHaveHoles = false,
         Capacity = 28,
@@ -29,7 +29,7 @@ module LastPurpose
         ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
         RunSpeedModifier = 0.95,
         WeightReduction = 65,
-        WorldStaticModel = DuffelBag_Ground,
+        WorldStaticModel = LastPurposeLootBagGround,
         Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
     }
 
@@ -62,4 +62,16 @@ module LastPurpose
         StaticModel = WalkieTalkieUSArmy,
         WorldStaticModel = WalkieTalkieUSArmy,
     }
+}
+
+/* El model vanilla DuffelBag_Ground NO trae linea `texture =` (el juego se
+   la pone desde IconsForTexture del item, que en items base:normal como la
+   bolsa sellada no siempre resuelve -> el modelo del suelo salia como
+   tablero rojo/blanco). Este model clona la malla y le fija una textura
+   gris explicita, asi la bolsa en el suelo se renderiza siempre. */
+model LastPurposeLootBagGround
+{
+    mesh = WorldItems/Clothing/DuffelBag_Ground,
+    texture = Clothes/Bag/DuffelBagGrey,
+    scale = 0.4,
 }
