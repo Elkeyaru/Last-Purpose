@@ -10,6 +10,14 @@ referencia histórica.
 ### Pendiente
 - Abrir la mesa con **E** (acción contextual, como los vehículos), solo al
   estar cerca. Además del menú contextual actual.
+- Migrar `LP_Computer` / `LP_BankSecurity` / `LP_Options` a **KeyasLib**
+  (`require=KeyasLib`), sin cambiar la narrativa ni los flujos validados.
+
+## 1.2.0 — 2026-09-08
+
+`versionMin` sube a 42.20.4. `mod.info` con nueva descripción y `poster.png`.
+Nada de esto cambia partidas en curso salvo la receta de la mesa (afecta solo
+a mesas nuevas).
 
 ### Añadido
 - **Hub del ordenador — hito 1 (`LP_Computer.lua`, nuevo).** La mesa de

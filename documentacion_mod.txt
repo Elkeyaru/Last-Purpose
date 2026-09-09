@@ -1,10 +1,10 @@
 LAST PURPOSE — DOCUMENTACIÓN MAESTRA DEL PROYECTO
-Estado del código: estable y validado en partida (v1.1.0)
-Juego: Project Zomboid Build 42 estable
+Estado del código: estable (v1.2.0). "El último golpe" validado en partida hasta 1.1.0; el hub del ordenador (1.2.0) es solo lectura y no altera ese flujo.
+Juego: Project Zomboid Build 42 (versionMin 42.20.4)
 Modo compatible actual: Singleplayer
 Autor original: ElKeyaru
 Esta reconstrucción (arquitectura, v1.0.0 en adelante): Claude (Anthropic), a pedido de ElKeyaru
-Última actualización: 7 de septiembre de 2026
+Última actualización: 8 de septiembre de 2026
 
 ======================================================================
 0. NOTA SOBRE ESTA VERSIÓN
@@ -147,7 +147,7 @@ los del jugador.
 ======================================================================
 
 mod.info (raíz y dentro de 42/)
-  Metadatos del mod. id=LastPurposeB42, versionMin=42.0, registro del
+  Metadatos del mod. id=LastPurposeB42, versionMin=42.20.4, registro del
   paquete de tiles.
 
 common/media/lua/shared/LastPurpose/LP_Heists.lua
@@ -244,10 +244,13 @@ definitivas.
 11. ESTADO DE PUBLICACIÓN
 ======================================================================
 
-La versión estable actual es 1.1.0. Incluye la reescritura completa de la
-lógica (1.0.0), el hotfix de orden de carga (1.0.1) y el rediseño de interfaz
-en libro (1.1.0). Es la primera reescritura validada en partida real de
-principio a fin.
+La versión estable actual es 1.2.0. Incluye la reescritura completa de la
+lógica (1.0.0), el hotfix de orden de carga (1.0.1), el rediseño de interfaz
+en libro (1.1.0), y en 1.2.0: sellado del banco reforzado, panel de opciones,
+receta de la mesa con chatarra electrónica, y el hito 1 del hub del ordenador
+(GUI de terminal retro de solo lectura, con fuente propia por atlas de
+glifos). El flujo de "El último golpe" está validado en partida hasta 1.1.0;
+lo de 1.2.0 no lo altera. versionMin sube a 42.20.4.
 
 Last Purpose es un mod no oficial de Project Zomboid. Project Zomboid y sus
 recursos pertenecen a The Indie Stone.
@@ -419,3 +422,10 @@ un doble registro si el archivo se volviera a ejecutar.
                 Primera versión jugada de punta a punta sin errores.
 1.1.0           Rediseño de interfaz: rastreador como libro de dos páginas
                 con índice de capítulos navegable.
+1.2.0           Sellado del banco reforzado (guardias de acción + barrido de
+                restauración). Panel de opciones (PZAPI.ModOptions). Diario
+                inaccesible al completar el golpe. Receta de la mesa con
+                chatarra electrónica. Hito 1 del hub del ordenador:
+                "Usar el ordenador" abre una GUI de terminal retro de solo
+                lectura, con fuente propia (atlas de glifos VT323).
+                versionMin -> 42.20.4.

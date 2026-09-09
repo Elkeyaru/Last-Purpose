@@ -23,7 +23,7 @@ LastPurpose.DEBUG = false
 LastPurpose.DEBUG_FAST_ACTIVATION = false
 LastPurpose.DEBUG_SHOW_EXACT_FREQUENCY = false
 
-LastPurpose.VERSION = "1.1.0"
+LastPurpose.VERSION = "1.2.0"
 LastPurpose.SAVE_KEY = "LastPurpose"
 LastPurpose.SCHEMA = 1
 
