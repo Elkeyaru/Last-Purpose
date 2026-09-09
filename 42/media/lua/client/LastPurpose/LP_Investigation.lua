@@ -53,22 +53,98 @@ function LastPurpose.hasReadClueNote(player, note)
     return pagesRead >= numberOfPages
 end
 
-local function spawnClue(data, clue)
-    local square = getCell():getGridSquare(clue.x, clue.y, clue.z)
-    if not square then return false end
-
-    local note = square:AddWorldInventoryItem(NOTE_TYPE, 0.5, 0.5, 0)
-    if not note then return false end
-    note:getModData().LastPurposeClue = "louisville_knox_bank"
-
-    pcall(function()
-        createRandomDeadBody(getCell():getGridSquare(clue.x + 1, clue.y, clue.z), 10)
-        addBloodSplat(square, 5)
+-- Casilla utilizable para la escena de la nota: con suelo, no solida y SIN
+-- vehiculo encima (el bug era que a veces caia bajo un coche). Si la de
+-- destino no sirve, busca en espiral hasta 4 tiles alrededor.
+local function squareUsable(sq)
+    if not sq then return false end
+    local okSolid, solid = pcall(function() return sq:isSolid() end)
+    if okSolid and solid then return false end
+    local okVeh, hasVeh = pcall(function()
+        if sq.getVehicleContainer and sq:getVehicleContainer() then return true end
+        if sq.HasVehicle and sq:HasVehicle() then return true end
+        return false
     end)
+    if okVeh and hasVeh then return false end
+    local okFloor, hasFloor = pcall(function() return sq:getFloor() ~= nil end)
+    if okFloor and not hasFloor then return false end
+    return true
+end
+
+local function findClueSquare(cx, cy, cz)
+    local cell = getCell()
+    for r = 0, 4 do
+        for dy = -r, r do
+            for dx = -r, r do
+                if r == 0 or math.abs(dx) == r or math.abs(dy) == r then
+                    local sq = cell:getGridSquare(cx + dx, cy + dy, cz)
+                    if squareUsable(sq) then return sq end
+                end
+            end
+        end
+    end
+    return cell:getGridSquare(cx, cy, cz)
+end
+
+local function spawnGuards(x, y, z, n)
+    local ok = pcall(function()
+        if addZombiesInOutfit then
+            addZombiesInOutfit(x, y, z, n, nil, 50)
+        else
+            error("no addZombiesInOutfit")
+        end
+    end)
+    if not ok then
+        pcall(function()
+            for _ = 1, n do
+                createHorde(1, x - 1, y - 1, x + 1, y + 1, x, y, false, false)
+            end
+        end)
+    end
+end
+
+local function spawnClue(data, clue)
+    local square = findClueSquare(clue.x, clue.y, clue.z)
+    if not square then return false end
+    local sx, sy, sz = square:getX(), square:getY(), square:getZ()
+
+    -- Dos cuerpos; la nota va DENTRO de uno de ellos (hay que saquearlos).
+    local corpses = {}
+    pcall(function() corpses[1] = createRandomDeadBody(square, 10) end)
+    local adj = findClueSquare(sx + 1, sy, sz)
+    pcall(function() corpses[2] = createRandomDeadBody(adj or square, 10) end)
+    pcall(function() addBloodSplat(square, 6) end)
+
+    local placed = false
+    for _, c in ipairs(corpses) do
+        if not placed and c then
+            local okC, cont = pcall(function()
+                return c:getContainer() or (c.getItemContainer and c:getItemContainer()) or nil
+            end)
+            if okC and cont then
+                local okA, item = pcall(function() return cont:AddItem(NOTE_TYPE) end)
+                if okA and item then
+                    item:getModData().LastPurposeClue = "louisville_knox_bank"
+                    placed = true
+                end
+            end
+        end
+    end
+    if not placed then
+        -- Ultimo recurso: en el suelo, para que la nota nunca se pierda.
+        local note = square:AddWorldInventoryItem(NOTE_TYPE, 0.5, 0.5, 0)
+        if not note then return false end
+        note:getModData().LastPurposeClue = "louisville_knox_bank"
+    end
+
+    -- Al menos 3 zombis custodiando.
+    spawnGuards(sx, sy, sz, 3)
 
     data.clueSpawned = true
-    data.clueX, data.clueY, data.clueZ = clue.x, clue.y, clue.z
-    LastPurpose.debugPrint(string.format("Nota del golpe creada en %d,%d,%d", clue.x, clue.y, clue.z))
+    data.clueX, data.clueY, data.clueZ = sx, sy, sz
+    LastPurpose.debugPrint(string.format(
+        "Escena de la nota creada en %d,%d,%d (nota %s)", sx, sy, sz,
+        placed and "en un cadaver" or "en el suelo"))
     return true
 end
 
@@ -97,9 +173,29 @@ function LastPurpose.updateInvestigation(player)
     end
 
     if LastPurpose.stageIs(data, "clue_found") then
+        -- La nota tiene que estar en el INVENTARIO del jugador (no leerla
+        -- desde el suelo/cadaver) y pasar un momento "leyendola". Antes se
+        -- dependia solo de getAlreadyReadPages, que fallaba cuando la accion
+        -- de lectura devolvia el item al mundo.
         local note = LastPurpose.findClueNote(player)
-        if note then data.cluePickedUp = true end
-        if not LastPurpose.hasReadClueNote(player, note) then return end
+        if not note then
+            data.clueHeldSinceHours = nil
+            return
+        end
+        data.cluePickedUp = true
+        data.clueHeldSinceHours = data.clueHeldSinceHours or player:getHoursSurvived()
+        local heldHours = player:getHoursSurvived() - (data.clueHeldSinceHours or 0)
+        local NOTE_READ_HOURS = 0.01  -- un momento con la nota en mano; la
+                                      -- comprobacion corre 1x/minuto de juego,
+                                      -- asi confirma al 2o tick tras recogerla.
+
+        if not (LastPurpose.hasReadClueNote(player, note) or heldHours >= NOTE_READ_HOURS) then
+            if not data.clueReadHintShown then
+                data.clueReadHintShown = true
+                LastPurpose.showThought(player, { "Mejor leo esto con calma." })
+            end
+            return
+        end
 
         LastPurpose.setStage(data, "note_read")
         data.clueRecovered = true

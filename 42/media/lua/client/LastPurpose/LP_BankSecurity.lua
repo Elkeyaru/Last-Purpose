@@ -35,11 +35,12 @@ local EARLY_ALARM_WINDOW_THRESHOLD = 2
 
 local knownEntrances = {}
 
--- Solo el cascaron exterior del edificio: las entradas interiores no hay
--- que sellarlas, y evita barrer el volumen hueco del banco. KeyasZones ya
--- escanea con este mismo margen; LP reutiliza SU lista (getEntries) en vez
--- de volver a recorrer el edificio por su cuenta.
-local BANK_SHELL_TILES = 5
+-- NOTA: se probo `shell` (escanear solo el anillo exterior del bbox) pero
+-- BANK_PERIMETER tiene padding respecto al edificio real, asi que shell=5
+-- se dejaba fuera muros/puertas y el sello se rompia. Vuelta al escaneo de
+-- volumen completo. La ganancia que SI se conserva: LP ya no hace un
+-- segundo barrido propio, reutiliza la lista de KeyasZones (getEntries).
+-- Para volver a `shell` habria que medir el edificio o hacerlo adaptativo.
 
 local function isEntrance(object)
     if instanceof(object, "IsoWindow") or instanceof(object, "IsoDoor") then return true end
@@ -85,7 +86,6 @@ local function ensureBankZone()
     if not p then return end
     local ok = KeyasZones.register("knox_bank_seal", {
         bbox = { minX = p.minX, maxX = p.maxX, minY = p.minY, maxY = p.maxY, minZ = p.minZ, maxZ = p.maxZ },
-        shell = BANK_SHELL_TILES,
         active = function()
             return shouldRemainProtected(LastPurpose.getPlayerSafe(0))
         end,
