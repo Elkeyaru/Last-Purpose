@@ -1,36 +1,50 @@
 -- ---------------------------------------------------------------------------
 -- Panel de opciones del mod: Opciones -> Mods -> Last Purpose.
 --
--- Usa la API nativa PZAPI.ModOptions de Build 42 (client/PZAPI/ModOptions.lua),
--- sin depender de ningun mod externo. El menu de opciones lo muestra solo en
--- cuanto hay al menos un panel registrado.
+-- Desde la migracion a KeyasLib usa KeyasOptions.createPanel (envoltorio
+-- fino y a prueba de doble registro sobre PZAPI.ModOptions de B42). Los IDs
+-- de opcion ("toggleTracker", "debug") se conservan tal cual para no
+-- huerfanar los ajustes guardados de los jugadores en modOptions.ini.
 --
--- Es un archivo de cliente: Keyboard.* y la API de UI ya estan listas cuando
--- carga. La tecla configurada se LEE siempre dentro de una funcion
--- (getTrackerKey), nunca como constante de nivel de archivo.
+-- Es un archivo de cliente: Keyboard.* y la API de UI ya estan listas.
+-- La tecla configurada se LEE siempre dentro de una funcion (getTrackerKey),
+-- nunca como constante de nivel de archivo.
 -- ---------------------------------------------------------------------------
 
 require "PZAPI/ModOptions"
+require "KeyasLib/KeyasOptions"
 
 LastPurpose = LastPurpose or {}
 
 local OPTIONS_ID = "LastPurpose"
 
+-- Crea el panel via KeyasOptions. Idempotente: si KeyasOptions aun no
+-- cargo (orden de carga), no pasa nada y refreshOptions lo reintenta en el
+-- siguiente tick de un minuto.
 local function build()
-    if not PZAPI or not PZAPI.ModOptions then return end
-    -- No registrar dos veces si el archivo se recarga en la misma sesion.
-    if PZAPI.ModOptions.Dict and PZAPI.ModOptions.Dict[OPTIONS_ID] then
-        LastPurpose.optionsPanel = PZAPI.ModOptions.Dict[OPTIONS_ID]
-        return
-    end
+    if LastPurpose.optionsPanel then return end
+    if not (KeyasOptions and KeyasOptions.createPanel) then return end
 
-    local opt = PZAPI.ModOptions:create(OPTIONS_ID, "Last Purpose")
-    opt:addTitle("Last Purpose")
-    opt:addKeyBind("toggleTracker", "Abrir / cerrar el diario", Keyboard.KEY_J,
-        "Tecla para mostrar u ocultar el diario del golpe.")
-    opt:addTickBox("debug", "Registro de depuracion", false,
-        "Escribe trazas detalladas de Last Purpose en la consola (console.txt).")
-    LastPurpose.optionsPanel = opt
+    local panel = KeyasOptions.createPanel(OPTIONS_ID, "Last Purpose", {
+        keybind = {
+            id = "toggleTracker",
+            name = "Abrir / cerrar el diario",
+            defaultKey = Keyboard.KEY_J,
+            tooltip = "Tecla para mostrar u ocultar el diario del golpe.",
+        },
+    })
+    if not panel then return end
+
+    -- Titulo + casilla de depuracion propias del mod. La casilla usa el id
+    -- "debug" historico y sincroniza LastPurpose.DEBUG (no KeyasLib.DEBUG),
+    -- por eso se anade a mano y no con opts.addDebugTickbox.
+    pcall(function() panel:addTitle("Last Purpose") end)
+    pcall(function()
+        panel:addTickBox("debug", "Registro de depuracion", false,
+            "Escribe trazas detalladas de Last Purpose en la consola (console.txt).")
+    end)
+
+    LastPurpose.optionsPanel = panel
 end
 
 local ok, err = pcall(build)
@@ -61,9 +75,10 @@ function LastPurpose.getTrackerKey()
 end
 
 -- Sincroniza LastPurpose.DEBUG con la casilla del panel. Se llama desde el
--- tick de un minuto y una vez al arrancar. Si el panel no existe, deja el
--- valor por defecto de LP_Heists.lua (false).
+-- tick de un minuto y una vez al arrancar. Tambien reintenta build() por si
+-- KeyasOptions cargo despues que este archivo.
 function LastPurpose.refreshOptions()
+    if not LastPurpose.optionsPanel then pcall(build) end
     local debug = readOption("debug")
     if type(debug) == "boolean" then
         LastPurpose.DEBUG = debug

@@ -1,15 +1,32 @@
 require "ISUI/ISWorldObjectContextMenu"
+-- Se cargan aqui para garantizar que las clases esten en _G antes de que
+-- KeyasZones intente envolver su isValid().
 require "TimedActions/ISSmashWindow"
 require "TimedActions/ISOpenCloseDoor"
 require "TimedActions/ISClimbThroughWindow"
 require "TimedActions/ISDestroyStuffAction"
+require "KeyasLib/KeyasZones"
+
+-- ---------------------------------------------------------------------------
+-- Sellado del Knox Bank durante la ventana de preparacion.
+--
+-- Desde la migracion a KeyasLib el trabajo generico -bloquear las acciones
+-- cronometradas que abren/rompen/destruyen una entrada, y revertir el daño
+-- que no pasa por una accion Lua (combate directo, zombis)- lo hace
+-- KeyasZones. Este archivo se queda con lo especifico del banco:
+--   * cerrojo real de puertas/ventanas (setIsLocked/PermaLocked) y guardar
+--     su salud original para restaurarla al liberar el perimetro,
+--   * el contador de cristales rotos tras iniciar el golpe -> alarma
+--     anticipada,
+--   * los pensamientos del jugador al acercarse con el banco sellado.
+--
+-- Nada de "local X = LastPurpose.World.*" a nivel de archivo: el motor puede
+-- ejecutar este archivo antes de que LP_Heists.lua cargue. Todo se lee
+-- dentro de funciones.
+-- ---------------------------------------------------------------------------
 
 LastPurpose = LastPurpose or {}
 
--- Funciones, no "local X = LastPurpose.World...." de nivel de archivo: el
--- motor puede ejecutar este archivo antes de que LP_Heists.lua (donde vive
--- LastPurpose.World) haya cargado. Al ser funciones, el valor solo se lee
--- cuando alguien las llama, mucho despues de que todo el mod ya cargo.
 local function ANCHOR() return LastPurpose.World.BANK_SECURITY_ANCHOR end
 local function PERIMETER() return LastPurpose.World.BANK_PERIMETER end
 local ENFORCE_RADIUS = 70
@@ -47,69 +64,47 @@ local function eachEntranceInPerimeter(callback)
     return count
 end
 
-local function recalcSquareOf(object)
-    local square = object:getSquare()
-    if not square then return end
-    pcall(function()
-        if square.RecalcProperties then square:RecalcProperties() end
-        if square.RecalcAllWithNeighbours then square:RecalcAllWithNeighbours(true) end
-    end)
+-- El perimetro queda sellado desde que se lee la nota hasta que el golpe
+-- arranca de verdad (heist_active).
+local function shouldRemainProtected(player)
+    if not player or not LastPurpose.isBurglar(player) then return false end
+    local data = LastPurpose.getData(player)
+    return LastPurpose.stageBetween(data, "note_read", "heist_active")
 end
 
--- Des-rompe una entrada nuestra que se haya roto pese al bloqueo. El combate
--- directo contra el cristal y los zombis no pasan por ninguna accion Lua, asi
--- que la unica via fiable desde el mod es revertir el estado en el siguiente
--- tick de enforce. Solo actua sobre objetos que YA marcamos como protegidos
--- (LastPurposeBankProtected), nunca sobre daño preexistente ajeno.
-local RESTORE_COOLDOWN_MS = 300
-
-function LastPurpose.restoreEntranceIfBroken(object)
-    local md = object:getModData()
-    if not md.LastPurposeBankProtected then return end
-
-    -- Limita la reconstruccion a ~3 por segundo por objeto: bajo pounding
-    -- continuo de zombis, un setSmashed(false)+recalc en cada tick de OnTick
-    -- puede causar parpadeo e inestabilidad de render (ver CHANGELOG 0.7.1).
-    local now = getTimestampMs()
-    if md.LastPurposeRestoredAt and now - md.LastPurposeRestoredAt < RESTORE_COOLDOWN_MS then return end
-
-    local changed = false
-
-    if instanceof(object, "IsoWindow") then
-        local ok, smashed = pcall(function() return object:isSmashed() end)
-        if ok and smashed then
-            local okGlass, glassGone = pcall(function() return object:isGlassRemoved() end)
-            if okGlass and glassGone then
-                -- El cristal ya no existe: setSmashed(false) no lo reconstruye.
-                -- Se registra una vez para no spamear.
-                if not md.LastPurposeGlassLostLogged then
-                    md.LastPurposeGlassLostLogged = true
-                    print("[LastPurpose] AVISO: un cristal protegido del banco perdio el vidrio y no se pudo restaurar")
-                end
-            else
-                pcall(function() object:setSmashed(false) end)
-                md.LastPurposeWindowWasSmashed = false
-                changed = true
-            end
-        end
-    elseif instanceof(object, "IsoThumpable") then
-        local ok, smashed = pcall(function() return object.isSmashed and object:isSmashed() end)
-        if ok and smashed then
-            pcall(function() object:setSmashed(false) end)
-            changed = true
-        end
-    end
-
-    if changed then
-        md.LastPurposeRestoredAt = now
-        pcall(function() if object.setHealth then object:setHealth(100000) end end)
-        recalcSquareOf(object)
+-- ---- zona KeyasLib: bloqueo de acciones + reversion de roturas ----------
+-- Se registra una sola vez. `active` se consulta en cada comprobacion, asi
+-- que abrir/cerrar el sello es solo cambiar de etapa. KeyasZones se encarga
+-- de: envolver isValid() en ISSmashWindow/ISOpenCloseDoor/ISClimbThroughWindow
+-- /ISDestroyStuffAction, y de un barrido que revierte roturas por combate
+-- directo o zombis (ver KeyasLib MIGRATION.md seccion 2).
+local function ensureBankZone()
+    if LastPurpose._bankZoneRegistered then return end
+    if not (KeyasZones and KeyasZones.register) then return end
+    local p = PERIMETER()
+    if not p then return end
+    local ok = KeyasZones.register("knox_bank_seal", {
+        bbox = { minX = p.minX, maxX = p.maxX, minY = p.minY, maxY = p.maxY, minZ = p.minZ, maxZ = p.maxZ },
+        active = function()
+            return shouldRemainProtected(LastPurpose.getPlayerSafe(0))
+        end,
+        warn = function(player)
+            LastPurpose.showThought(player, {
+                "El banco sigue cerrado.",
+                "Tengo que esperar a la hora del golpe.",
+            })
+        end,
+    })
+    if ok then
+        LastPurpose._bankZoneRegistered = true
+        LastPurpose.debugPrint("Zona KeyasZones 'knox_bank_seal' registrada")
     end
 end
+
+-- ---- cerrojo + salud (especifico del banco; KeyasZones no cierra) -------
 
 local function protectEntrance(object)
     local md = object:getModData()
-    -- Un cristal ya roto que no era nuestro no se "repara" al protegerlo.
     if instanceof(object, "IsoWindow") and object:isSmashed() and not md.LastPurposeBankProtected then return end
 
     if md.LastPurposeOriginalHealth == nil and object.getHealth then
@@ -121,11 +116,6 @@ local function protectEntrance(object)
     pcall(function() if object.setPermaLocked then object:setPermaLocked(true) end end)
     md.LastPurposeBankProtected = true
     knownEntrances[object] = true
-
-    -- Tras marcarlo como protegido, revertir cualquier rotura que ya haya
-    -- ocurrido (combate directo, zombis). Se llama tanto desde el tick de
-    -- enforce como desde la reconstruccion por minuto.
-    LastPurpose.restoreEntranceIfBroken(object)
 end
 
 local function releaseEntrance(object)
@@ -137,22 +127,25 @@ local function releaseEntrance(object)
     pcall(function() if object.setIsLocked then object:setIsLocked(false) end end)
     md.LastPurposeBankProtected = false
     md.LastPurposeOriginalHealth = nil
-    md.LastPurposeRestoredAt = nil
     md.LastPurposeGlassLostLogged = nil
 end
 
-local function shouldRemainProtected(player)
-    if not player or not LastPurpose.isBurglar(player) then return false end
-    local data = LastPurpose.getData(player)
-    -- El perimetro queda sellado desde que se lee la nota hasta que el golpe
-    -- arranca de verdad (heist_active). Antes se liberaba solo con que fuera
-    -- de noche y el banco estuviera reconocido, aunque el jugador todavia no
-    -- hubiera iniciado el golpe: eso dejaba puertas y ventanas abiertas en la
-    -- franja entre "son las 20:00" y "el jugador llego al banco". Ahora tiene
-    -- que llegar al banco dentro de la ventana nocturna para que la etapa
-    -- pase a heist_active, y recien entonces se puede abrir o romper nada.
-    return LastPurpose.stageBetween(data, "note_read", "heist_active")
+-- Sigue existiendo para el hook del menu contextual y para el conteo de
+-- cristales: dice si `object` es una entrada del perimetro que debe estar
+-- sellada ahora mismo.
+function LastPurpose.isProtectedBankEntrance(player, object)
+    if not player or not object or not shouldRemainProtected(player) then return false end
+    local square = object:getSquare()
+    if not square then return false end
+    local x, y, z = square:getX(), square:getY(), square:getZ()
+    local p = PERIMETER()
+    return x >= p.minX and x <= p.maxX
+        and y >= p.minY and y <= p.maxY
+        and z >= p.minZ and z <= p.maxZ
+        and isEntrance(object)
 end
+
+-- ---- eventos ----------------------------------------------------------
 
 function LastPurpose.enforceBankSecurity()
     local player = LastPurpose.getPlayerSafe(0)
@@ -175,6 +168,7 @@ function LastPurpose.enforceBankSecurity()
     for object in pairs(knownEntrances) do releaseEntrance(object) end
     if not LastPurpose.isBurglar(player) then return end
 
+    -- Sello YA abierto: contar cristales rotos para la alarma anticipada.
     local data = LastPurpose.getData(player)
     if not LastPurpose.stageBetween(data, "bank_scouted", "loot_taken") then return end
 
@@ -198,49 +192,8 @@ function LastPurpose.enforceBankSecurity()
     end
 end
 
-function LastPurpose.isProtectedBankEntrance(player, object)
-    if not player or not object or not shouldRemainProtected(player) then return false end
-    local square = object:getSquare()
-    if not square then return false end
-    local x, y, z = square:getX(), square:getY(), square:getZ()
-    return x >= PERIMETER().minX and x <= PERIMETER().maxX
-        and y >= PERIMETER().minY and y <= PERIMETER().maxY
-        and z >= PERIMETER().minZ and z <= PERIMETER().maxZ
-        and isEntrance(object)
-end
-
-function LastPurpose.onWeaponHitBankObject(...)
-    local player, object = nil, nil
-    for i = 1, select("#", ...) do
-        local value = select(i, ...)
-        if value and not player and instanceof(value, "IsoPlayer") then player = value end
-        if value and not object and (instanceof(value, "IsoWindow") or instanceof(value, "IsoDoor") or instanceof(value, "IsoThumpable")) then
-            object = value
-        end
-    end
-    player = player or LastPurpose.getPlayerSafe(0)
-    if not LastPurpose.isProtectedBankEntrance(player, object) then return end
-
-    local wasProtected = object:getModData().LastPurposeBankProtected == true
-    protectEntrance(object)
-    if wasProtected and instanceof(object, "IsoWindow") then
-        pcall(function()
-            if object:isSmashed() then object:setSmashed(false) end
-            local square = object:getSquare()
-            if square then
-                if square.RecalcProperties then square:RecalcProperties() end
-                if square.RecalcAllWithNeighbours then square:RecalcAllWithNeighbours(true) end
-            end
-        end)
-    end
-
-    if not LastPurpose.bankWeaponWarningAt or getTimestampMs() - LastPurpose.bankWeaponWarningAt > 2500 then
-        LastPurpose.bankWeaponWarningAt = getTimestampMs()
-        LastPurpose.showThought(player, { "No puedo forzar la entrada ahora.", "La alarma atraeria a medio Louisville." })
-    end
-    return false
-end
-
+-- Redundante con la guardia isValid de KeyasZones sobre ISSmashWindow, pero
+-- barato y da un pensamiento propio: se deja como cinturon y tirantes.
 if not LastPurpose.bankSmashHookInstalled then
     LastPurpose.bankSmashHookInstalled = true
     local originalSmashWindow = ISWorldObjectContextMenu.onSmashWindow
@@ -255,63 +208,8 @@ if not LastPurpose.bankSmashHookInstalled then
     end
 end
 
--- ---------------------------------------------------------------------------
--- Bloqueo real de las acciones que vulneran una entrada.
---
--- setHealth()/setIsLocked() NO frena todas las vias en Build 42: romper un
--- cristal a mano llama directo a IsoPlayer:smashWindow() sin mirar la salud
--- del objeto; un Ladron puede forzar cerraduras; el mazo pasa por
--- ISDestroyStuffAction. En vez de tapar cada via por separado, se envuelve el
--- isValid() de cada accion cronometrada relevante: si el objetivo es una
--- entrada protegida del banco, la accion se rechaza ANTES de arrancar, venga
--- del menu contextual, de una tecla o del prompt en pantalla. Es una sola
--- envoltura idempotente por clase (flag LastPurposeSealGuard).
--- ---------------------------------------------------------------------------
-local GUARDED_ACTIONS = {
-    { class = "ISSmashWindow",        field = "window" },
-    { class = "ISOpenCloseDoor",      field = "item" },
-    { class = "ISClimbThroughWindow", field = "item" },
-    { class = "ISDestroyStuffAction", field = "item" },
-}
-
-local function warnBankSealed(player)
-    if not player then return end
-    if not LastPurpose.bankWeaponWarningAt or getTimestampMs() - LastPurpose.bankWeaponWarningAt > 2500 then
-        LastPurpose.bankWeaponWarningAt = getTimestampMs()
-        LastPurpose.showThought(player, { "El banco sigue cerrado.", "Tengo que esperar a la hora del golpe." })
-    end
-end
-
-function LastPurpose.installBankActionGuards()
-    for _, spec in ipairs(GUARDED_ACTIONS) do
-        local class = _G[spec.class]
-        if class and not class.LastPurposeSealGuard then
-            local originalIsValid = class.isValid
-            class.isValid = function(self)
-                local target = self[spec.field]
-                local actor = self.character or LastPurpose.getPlayerSafe(0)
-                local ok, blocked = pcall(LastPurpose.isProtectedBankEntrance, actor, target)
-                if ok and blocked then
-                    warnBankSealed(actor)
-                    return false
-                end
-                if originalIsValid then return originalIsValid(self) end
-                return true
-            end
-            class.LastPurposeSealGuard = true
-            LastPurpose.debugPrint("Guardia de accion instalada sobre " .. spec.class)
-        end
-    end
-end
-
-LastPurpose.installBankActionGuards()
-
 function LastPurpose.updateBankSecurity()
-    -- Por si el motor cargo alguna de las clases de accion despues que este
-    -- archivo; es idempotente y barato (solo instala lo que falte). Va antes
-    -- del corte por distancia para que las guardias queden puestas aunque el
-    -- jugador todavia no se haya acercado nunca al banco.
-    LastPurpose.installBankActionGuards()
+    ensureBankZone()
 
     local player = LastPurpose.getPlayerSafe(0)
     if not player then return end

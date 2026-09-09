@@ -45,10 +45,28 @@ referencia histórica.
   `KeyasUI.registerFont` + `KeyasUI.text/measure` de KeyasLib. Sin cambio de
   comportamiento; si KeyasLib no está o el atlas falla, cae a `UIFont`.
 
+### Cambiado (migración a KeyasLib)
+- **`LP_Options` → `KeyasOptions`.** El panel de Opciones → Mods → Last
+  Purpose se crea con `KeyasOptions.createPanel` (envoltorio a prueba de
+  doble registro). Se conservan los IDs `toggleTracker` y `debug` para no
+  huérfanar los ajustes guardados. `getTrackerKey` y `refreshOptions`
+  siguen igual; `refreshOptions` reintenta crear el panel si KeyasOptions
+  cargó después.
+- **`LP_BankSecurity` → `KeyasZones` (parcial).** El trabajo genérico
+  -envolver `isValid()` en las 4 acciones cronometradas y el barrido que
+  revierte roturas por combate directo/zombis- lo hace ahora
+  `KeyasZones.register("knox_bank_seal", {bbox, active, warn})`. `LP_BankSecurity`
+  se queda con lo específico: cerrojo real (`setPermaLocked`) + salvar/
+  restaurar la salud original, el contador de cristales rotos → alarma
+  anticipada, y los pensamientos al acercarse. Se retiró `onWeaponHitBankObject`
+  (el evento `OnWeaponHitThumpable` no dispara en B42; el barrido de
+  KeyasZones lo cubre). El archivo pasó de 366 a 264 líneas.
+  **Verificar en juego que KeyasZones detecta las puertas/ventanas del
+  banco** (`KeyasLib.DEBUG = true` y mirar el conteo).
+
 ### Pendiente
 - Scroll en la lista de misiones si algún día no cabe (KeyasCSS aún no
   tiene scroll; a pantalla completa entran las 4 ciudades).
-- Migrar `LP_BankSecurity` a `KeyasZones` y `LP_Options` a `KeyasOptions`.
   Se dejó para después de probar KeyasLib en juego con un consumidor real:
   el sellado del banco de 1.2.0 está validado y no se toca hasta entonces.
 

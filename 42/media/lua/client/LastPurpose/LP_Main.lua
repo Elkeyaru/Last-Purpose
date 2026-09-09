@@ -41,7 +41,8 @@ if not LastPurpose.eventsRegistered then
     Events.OnCreatePlayer.Add(LastPurpose.ensureTracker)
     Events.OnKeyPressed.Add(LastPurpose.onKeyPressed)
     Events.OnDeviceText.Add(LastPurpose.onDeviceText)
-    Events.OnWeaponHitThumpable.Add(LastPurpose.onWeaponHitBankObject)
+    -- (OnWeaponHitThumpable/onWeaponHitBankObject retirado: la guardia de
+    --  KeyasZones y su barrido cubren el daño por combate directo.)
     Events.OnFillWorldObjectContextMenu.Add(LastPurpose.fillPlanningTableWorldMenu)
 
     LastPurpose.eventsRegistered = true
