@@ -85,6 +85,7 @@ local ARCHIVES = {
 local DESKTOP   = { 0.106, 0.125, 0.118 }
 local WINFACE   = { 0.725, 0.714, 0.678 }
 local INK       = { 0.086, 0.086, 0.059 }
+local INK_SOFT  = { 0.290, 0.278, 0.235 }
 local PHOSPHOR  = { 0.184, 0.906, 0.769 }
 local PH_DIM    = { 0.110, 0.561, 0.486 }
 local OKC       = { 0.337, 0.706, 0.353 }
@@ -110,7 +111,10 @@ local IC = {
 }
 
 -- Dibuja un icono de la hoja procesada, tintado. Fallback: glifo de rects.
+-- `c` puede venir nil desde un hook onPaint mal cableado: se usa INK para
+-- no reventar el render (que ademas se cachea y spamearia el error).
 local function drawIcon(self, n, x, y, size, c)
+    c = c or INK
     local t = icon(n)
     if t then
         self:drawTextureScaled(t, x, y, size, size, 1, c[1], c[2], c[3])
@@ -758,9 +762,16 @@ function LPComputer:paint()
         self._contentTree = ok and tree or nil
         self._treeDirty = false
         self._rectKey = rectKey
+        self._paintFails = 0   -- arbol nuevo: se vuelve a intentar pintar
     end
-    if self._contentTree then
-        pcall(function() self._contentTree:paint(self) end)
+    if self._contentTree and (self._paintFails or 0) < 3 then
+        local ok, err = pcall(function() self._contentTree:paint(self) end)
+        if not ok then
+            self._paintFails = (self._paintFails or 0) + 1
+            if self._paintFails == 3 then
+                print("[LastPurpose] ERROR pintando el contenido del ordenador (se deja de intentar): " .. tostring(err))
+            end
+        end
     end
 end
 
