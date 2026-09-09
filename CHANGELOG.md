@@ -17,12 +17,28 @@ referencia histórica.
   de estilos (`CONTENT_CSS`) y KeyasCSS resuelve flexbox, esquinas
   redondeadas, bordes y sombras. Los iconos y el mini-mapa se dibujan por
   hooks `onPaint`. La receta, el catálogo, `knoxStatus`, el flujo de
-  entrega del botín (`reviewHeistLoot`), el cierre con ESC/click-fuera y
-  `LastPurpose.openComputer` no cambian. Motivo: la mesa-ordenador es el
-  primer consumidor real de KeyasCSS; su desarrollo endurece la librería
-  (ver KeyasLib CHANGELOG 1.2.2). **Sin probar en juego todavía.**
+  entrega del botín (`reviewHeistLoot`) y `LastPurpose.openComputer` no
+  cambian. Motivo: la mesa-ordenador es el primer consumidor real de
+  KeyasCSS; su desarrollo endurece la librería (KeyasLib 1.2.2–1.2.4).
+  Requiere **KeyasLib >= 1.2.4**.
+- **La GUI abre a pantalla completa** (ocupa toda la ventana del juego). El
+  chrome se estira a la pantalla; zonas escaladas por `sx`/`sy`.
+- **La GUI ya no se cierra al hacer clic fuera de un elemento.** Solo
+  cierra la **X** o **ESC**. El clic dentro se consume (no llega al mundo).
+- Barra de título dinámica por app (Notas/Archivos/Sistema repintan el
+  título horneado).
+- Tipografía: 4 atlas de glifos nuevos (Bahnschrift ui14/ui18/ui30,
+  Consolas mono16) vía `tools/bake_fonts.ps1`, reemplazan al atlas VT323
+  único. `docs/GUI_ASSETS.md` especifica el chrome + iconos.
+- Assets nuevos de ChatGPT: `xcyos_chrome.png` rehecho, `lp_icon_00..16`,
+  `lp_prof_{ladron,medico,ingeniero,veterano}`.
+- **Sin probar del todo en juego.**
 
 ### Añadido
+- **Interacción con la tecla E:** junto a la mesa, `E` abre la GUI (como
+  los vehículos). `LP_SafehouseAnchor.lua` expone
+  `LastPurpose.findNearbyTable(player)`. El menú contextual del mundo
+  ("Usar el ordenador") sigue disponible.
 - **Dependencia de KeyasLib** (`require=KeyasLib` en ambos `mod.info`). El
   renderizado de la fuente de terminal del ordenador (glifo a glifo desde el
   atlas) pasó de código propio en `LP_Computer.lua` a
@@ -30,8 +46,8 @@ referencia histórica.
   comportamiento; si KeyasLib no está o el atlas falla, cae a `UIFont`.
 
 ### Pendiente
-- Abrir la mesa con **E** (acción contextual, como los vehículos), solo al
-  estar cerca. Además del menú contextual actual.
+- Scroll en la lista de misiones si algún día no cabe (KeyasCSS aún no
+  tiene scroll; a pantalla completa entran las 4 ciudades).
 - Migrar `LP_BankSecurity` a `KeyasZones` y `LP_Options` a `KeyasOptions`.
   Se dejó para después de probar KeyasLib en juego con un consumidor real:
   el sellado del banco de 1.2.0 está validado y no se toca hasta entonces.
