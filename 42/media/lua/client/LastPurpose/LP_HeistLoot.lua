@@ -5,20 +5,27 @@ local BAG_TYPE = "LastPurpose.SealedKnoxBankLoot"
 local function SPAWN() return LastPurpose.World.BANK_LOOT_SPAWN end
 local PICKUP_CHECK_RADIUS = 80
 
-function LastPurpose.applyBlackLootVisual(item)
+-- Tinte de la bolsa del botin. El icono base ya es gris (Icon = DuffelBag_Grey
+-- en el script), asi que aqui solo se aplica un multiplicador suave para
+-- darle un matiz consistente sin oscurecerla. Antes era 0.08 (casi negro).
+-- El modelo del suelo (WorldStaticModel) puede no respetar este color en
+-- B42; si sigue saliendo tostado en el suelo habra que darle un
+-- WorldObjectSprite/modelo propio.
+local LOOT_TINT = 0.85
+function LastPurpose.applyLootVisual(item)
     if not item then return end
     pcall(function()
-        item:setColorRed(0.08)
-        item:setColorGreen(0.08)
-        item:setColorBlue(0.08)
-        item:setColor(Color.new(0.08, 0.08, 0.08))
+        item:setColorRed(LOOT_TINT)
+        item:setColorGreen(LOOT_TINT)
+        item:setColorBlue(LOOT_TINT)
+        item:setColor(Color.new(LOOT_TINT, LOOT_TINT, LOOT_TINT))
         item:setCustomColor(true)
     end)
 end
 
 local function markLootBag(bag)
     if not bag then return nil end
-    LastPurpose.applyBlackLootVisual(bag)
+    LastPurpose.applyLootVisual(bag)
     local itemData = bag:getModData()
     itemData.LastPurposeLootId = LOOT_ID
     itemData.LastPurposeLootSealed = true
@@ -70,7 +77,7 @@ function LastPurpose.findHeistLootBag(container, seen)
         if item then
             local itemData = item:getModData()
             if itemData and itemData.LastPurposeLootId == LOOT_ID then
-                LastPurpose.applyBlackLootVisual(item)
+                LastPurpose.applyLootVisual(item)
                 return item
             end
             if item.getInventory then

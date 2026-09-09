@@ -84,13 +84,13 @@ end
 
 local function openLootBag(player, sealedBag, data)
     if sealedBag:getFullType() == OPEN_LOOT_BAG_TYPE then
-        LastPurpose.applyBlackLootVisual(sealedBag)
+        LastPurpose.applyLootVisual(sealedBag)
         return sealedBag
     end
 
     local openBag = player:getInventory():AddItem(OPEN_LOOT_BAG_TYPE)
     if not openBag then return nil end
-    LastPurpose.applyBlackLootVisual(openBag)
+    LastPurpose.applyLootVisual(openBag)
 
     local openData = openBag:getModData()
     openData.LastPurposeLootId = "louisville_knox_bank"
