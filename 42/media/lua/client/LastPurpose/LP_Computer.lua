@@ -127,17 +127,22 @@ local function knoxStatus(data)
 end
 
 -- ---- chrome horneado + zonas de contenido -----------------------------
-local BAKE_W, BAKE_H = 1920, 1080
--- Medido sobre el xcyos_chrome.png actual (espacio 1920x1080). La GUI se
--- abre a pantalla completa: el chrome se estira a la pantalla y estas zonas
--- se escalan con ella (sx = w/1920, sy = h/1080).
+-- Medido sobre el xcyos_chrome.png actual (espacio 1927x1080). Este chrome
+-- NO trae rail ni texto de titulo horneados: los dibuja este archivo en
+-- paint(). La GUI se abre a pantalla completa; el chrome se estira a la
+-- pantalla y estas zonas se escalan con ella (sx = w/1927, sy = h/1080).
+local BAKE_W, BAKE_H = 1927, 1080
 local SKIN = {
-    content    = { 176, 107, 1365, 843 },    -- rectangulo de contenido del PNG; lo pinta KeyasCSS
-    titleClose = { 1500, 62, 44, 34 },       -- glifo X de la barra de titulo
-    titleText  = { 232, 66, 700, 34 },       -- zona del texto del titulo (para repintarlo por app)
-    rail       = { { 12, 40, 142, 96 }, { 12, 150, 142, 96 }, { 12, 260, 142, 96 }, { 12, 370, 142, 96 } },
+    content    = { 176, 103, 1370, 847 },     -- rectangulo de contenido; lo pinta KeyasCSS
+    titleClose = { 1502, 58, 46, 46 },        -- glifo X de la barra de titulo
+    titleText  = { 216, 62, 1180, 42 },       -- franja del titulo (la dibujamos nosotros)
+    rail       = { { 21, 66, 152, 110 }, { 21, 186, 152, 110 }, { 21, 306, 152, 110 }, { 21, 426, 152, 110 } },
 }
-local TITLE_BG = { 0.196, 0.255, 0.235 }     -- verde oscuro de la barra de titulo horneada
+local TITLE_BG  = { 0.196, 0.255, 0.235 }     -- verde de la barra de titulo (#324139)
+local TITLE_INK = { 0.918, 1.000, 0.965 }     -- #eafffb
+local RAIL_ON   = { 0.900, 1.000, 0.965 }     -- icono/etiqueta de la pestana activa
+local RAIL_OFF  = { 0.760, 0.790, 0.770 }     -- icono/etiqueta inactiva
+local RAIL_LBL_OFF = { 0.620, 0.660, 0.630 }
 
 -- Hoja de estilos del CONTENIDO. Escrita en espacio 1920; KeyasCSS.parse la
 -- escala por self.s en layout(). Un color de panel algo mas oscuro que la
@@ -563,22 +568,35 @@ function LPComputer:paint()
         self:drawRect(0, 0, self.width, self.height, 1, DESKTOP[1], DESKTOP[2], DESKTOP[3])
     end
 
-    -- Titulo dinamico: el chrome trae horneado "ARCHIVO DE MISIONES"; para
-    -- las otras apps se repinta encima de su zona.
-    if self.app ~= "misiones" then
+    -- Titulo: el chrome trae la franja en blanco; lo dibujamos nosotros
+    -- para todas las apps.
+    do
         local tx, ty, tw, th = self:zone(SKIN.titleText)
-        self:drawRect(tx, ty, tw, th, 1, TITLE_BG[1], TITLE_BG[2], TITLE_BG[3])
-        KeyasUI.text(self, TITLE_BY_APP[self.app] or "", tx + 2, ty + math.floor(th * 0.12),
-            { r = 0.918, g = 1.0, b = 0.965, a = 1 }, "lp_ui_18")
+        KeyasUI.text(self, TITLE_BY_APP[self.app] or "LAST PURPOSE",
+            tx, ty + math.floor(th * 0.16),
+            { r = TITLE_INK[1], g = TITLE_INK[2], b = TITLE_INK[3], a = 1 }, "lp_ui_18")
     end
 
-    -- resaltado de la pestana activa del rail
+    -- Rail: 4 pestanas dibujadas por nosotros (el chrome nuevo no las trae).
     for i, app in ipairs(APPS) do
-        if self.app == app.id then
-            local rx, ry, rw, rh = self:zone(SKIN.rail[i])
+        local rx, ry, rw, rh = self:zone(SKIN.rail[i])
+        local active = (self.app == app.id)
+        if active then
             self:drawRect(rx, ry, rw, rh, 0.16, PHOSPHOR[1], PHOSPHOR[2], PHOSPHOR[3])
             self:drawRectBorder(rx, ry, rw, rh, 1, PH_DIM[1], PH_DIM[2], PH_DIM[3])
+        else
+            self:drawRect(rx, ry, rw, rh, 0.10, 1, 1, 1)
+            self:drawRectBorder(rx, ry, rw, rh, 0.35, 0, 0, 0)
         end
+        local isz = math.floor(rh * 0.42)
+        drawIcon(self, IC[app.id] or 0,
+            rx + math.floor((rw - isz) / 2), ry + math.floor(rh * 0.14), isz,
+            active and RAIL_ON or RAIL_OFF)
+        local lbl = app.label
+        local lw = (KeyasUI and KeyasUI.measure and (KeyasUI.measure(lbl, "lp_ui_14"))) or (#lbl * 6)
+        local lc = active and RAIL_ON or RAIL_LBL_OFF
+        KeyasUI.text(self, lbl, rx + math.floor((rw - lw) / 2), ry + rh - math.floor(rh * 0.30),
+            { r = lc[1], g = lc[2], b = lc[3], a = 1 }, "lp_ui_14")
     end
 
     local cx, cy, cw, chh = self:zone(SKIN.content)
