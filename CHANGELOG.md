@@ -7,6 +7,21 @@ referencia histórica.
 
 ## Sin publicar
 
+### Cambiado
+- **`LP_Computer` — el contenido de la GUI ahora lo maqueta y pinta
+  KeyasCSS** (KeyasLib >= 1.2.2), no primitivas a mano. El *chrome* fijo
+  (bisel CRT, marco, barra de título con degradado, franja, logo, viñeta)
+  sigue siendo `xcyos_chrome.png` horneado; lo que cambió es el interior:
+  lista de misiones, panel de detalle, badges, tiles de recompensa y las
+  apps Notas/Archivos/Sistema se describen como un árbol de cajas con hoja
+  de estilos (`CONTENT_CSS`) y KeyasCSS resuelve flexbox, esquinas
+  redondeadas, bordes y sombras. Los iconos y el mini-mapa se dibujan por
+  hooks `onPaint`. La receta, el catálogo, `knoxStatus`, el flujo de
+  entrega del botín (`reviewHeistLoot`), el cierre con ESC/click-fuera y
+  `LastPurpose.openComputer` no cambian. Motivo: la mesa-ordenador es el
+  primer consumidor real de KeyasCSS; su desarrollo endurece la librería
+  (ver KeyasLib CHANGELOG 1.2.2). **Sin probar en juego todavía.**
+
 ### Añadido
 - **Dependencia de KeyasLib** (`require=KeyasLib` en ambos `mod.info`). El
   renderizado de la fuente de terminal del ordenador (glifo a glifo desde el
