@@ -28,7 +28,12 @@ referencia histórica.
   Gemini procesada a 17 PNG transparentes (`lp_icon_00..16`), logo `xcyos_logo.png`
   y `crt_overlay.png` + `grad_title/grad_button` generados por código.
   `LP_Computer.lua` los carga con `getTexture` y cae al dibujo de
-  rectángulos si algún PNG falta. Falta la fuente pixel (`.fnt`).
+  rectángulos si algún PNG falta.
+- **Fuente de terminal propia.** B42 no deja registrar una fuente de mod sin
+  pisar las vanilla, así que la GUI del ordenador dibuja el texto glifo a
+  glifo desde un atlas propio (`lp_term_18/26`, VT323 procesada con
+  System.Drawing) vía `drawSubTexture`. Métricas en `LP_TermFontData.lua`.
+  Si el atlas o los datos faltan, cae a `UIFont`. Solo afecta a esta GUI.
 - **Receta de la mesa** cambiada a `2 tablones + 3 chatarra electrónica +
   1 pegamento/cinta` (antes libro + periódicos). El nombre del mueble no
   cambia: sigue siendo «Mesa de planificación».

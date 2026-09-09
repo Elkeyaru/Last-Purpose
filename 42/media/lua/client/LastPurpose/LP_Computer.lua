@@ -1,5 +1,6 @@
 require "ISUI/ISPanel"
 require "ISUI/ISButton"
+require "LastPurpose/LP_TermFontData"
 
 -- ---------------------------------------------------------------------------
 -- LP_Computer.lua - Hito 1 del hub del ordenador (roadmap punto 2).
@@ -130,23 +131,101 @@ local function bevel(self, x, y, w, h, face, raised)
     rect(self, x + w - 1, y, 1, h, lo)
 end
 
+-- ---- fuente de terminal (atlas propio VT323) --------------------------
+-- B42 no deja registrar una fuente de mod nueva sin pisar las vanilla, asi
+-- que se dibuja el texto glifo a glifo desde nuestro atlas con
+-- drawSubTexture. Si el atlas o los datos faltan, cae a UIFont.
+local FONT_ATLAS_DIR = "media/ui/LastPurpose/"
+local fontCache = {}
+local function termFont(px)
+    if fontCache[px] == nil then
+        local d = LP_TermFontData and LP_TermFontData[px]
+        local ok, atlas = pcall(getTexture, FONT_ATLAS_DIR .. "lp_term_" .. px .. "_0.png")
+        fontCache[px] = (d and ok and atlas) and { d = d, atlas = atlas } or false
+    end
+    return fontCache[px] or nil
+end
+
+local function pxOf(font) return (font == UIFont.Large) and 26 or 18 end
+
+-- iterador de code points UTF-8 (1-3 bytes; el mod no usa mas)
+local function eachCP(str)
+    local i, n = 1, #str
+    return function()
+        if i > n then return nil end
+        local b = string.byte(str, i)
+        if b < 0x80 then i = i + 1; return b end
+        if b >= 0xF0 then i = i + 4; return 63 end
+        if b >= 0xE0 and i + 2 <= n then
+            local b2, b3 = string.byte(str, i + 1), string.byte(str, i + 2)
+            i = i + 3
+            return (b - 0xE0) * 4096 + (b2 - 0x80) * 64 + (b3 - 0x80)
+        end
+        if b >= 0xC0 and i + 1 <= n then
+            local b2 = string.byte(str, i + 1)
+            i = i + 2
+            return (b - 0xC0) * 64 + (b2 - 0x80)
+        end
+        i = i + 1
+        return 63
+    end
+end
+
+local function termWidth(str, px)
+    local f = termFont(px)
+    if not f then return nil end
+    local adv = f.d.g[32] and f.d.g[32][7] or math.floor(px / 2)
+    local w = 0
+    for cp in eachCP(tostring(str)) do
+        local g = f.d.g[cp]
+        w = w + (g and g[7] or adv)
+    end
+    return w
+end
+
+local function termDraw(self, str, x, y, c, px)
+    local f = termFont(px)
+    if not f then return nil end
+    local a = f.atlas
+    local adv = f.d.g[32] and f.d.g[32][7] or math.floor(px / 2)
+    local penX = x
+    for cp in eachCP(tostring(str)) do
+        local g = f.d.g[cp] or f.d.g[63]
+        if g and g[3] > 0 then
+            self:drawSubTexture(a, g[1], g[2], g[3], g[4], penX + g[5], y + g[6], g[3], g[4], 1, c[1], c[2], c[3])
+        end
+        penX = penX + ((g and g[7]) or adv)
+    end
+    return penX
+end
+
+local function measure(str, font)
+    local w = termWidth(str, pxOf(font))
+    if w then return w end
+    return getTextManager():MeasureStringX(font or UIFont.Small, tostring(str))
+end
+
+local function lineH(font)
+    local f = termFont(pxOf(font))
+    if f then return f.d.lh end
+    return getTextManager():getFontHeight(font or UIFont.Small)
+end
+
 local function text(self, str, x, y, c, font)
-    self:drawText(str, x, y, c[1], c[2], c[3], 1, font or UIFont.Small)
+    if termDraw(self, str, x, y, c, pxOf(font)) then return end
+    self:drawText(tostring(str), x, y, c[1], c[2], c[3], 1, font or UIFont.Small)
 end
 
 local function textRight(self, str, x, y, c, font)
-    font = font or UIFont.Small
-    self:drawText(str, x - getTextManager():MeasureStringX(font, str), y, c[1], c[2], c[3], 1, font)
+    text(self, str, x - measure(str, font), y, c, font)
 end
 
 local function drawWrapped(self, str, x, y, w, c, font)
-    font = font or UIFont.Small
-    local tm = getTextManager()
-    local lh = tm:getFontHeight(font) + 3
+    local lh = lineH(font) + 3
     local line = ""
     for word in string.gmatch(tostring(str), "%S+") do
         local cand = (line == "") and word or (line .. " " .. word)
-        if line ~= "" and tm:MeasureStringX(font, cand) > w then
+        if line ~= "" and measure(cand, font) > w then
             text(self, line, x, y, c, font); y = y + lh; line = word
         else
             line = cand
@@ -372,7 +451,7 @@ function LPComputer:renderRail()
         if active then bevel(self, 4, ry, RAIL_W - 8, 52, { 0.12, 0.30, 0.27 }) end
         local c = active and { 0.92, 1.0, 0.97 } or { 0.72, 0.78, 0.75 }
         appGlyph(self, app.id, 33, ry + 6, c)
-        local lw = getTextManager():MeasureStringX(UIFont.Small, app.label)
+        local lw = measure(app.label, UIFont.Small)
         text(self, app.label, math.floor((RAIL_W - lw) / 2), ry + 37, c)
         table.insert(self.appHitboxes, { id = app.id, x = 4, y = ry, w = RAIL_W - 8, h = 52 })
         ry = ry + 58
@@ -420,7 +499,7 @@ function LPComputer:renderDetail(x, y, w)
 
     local label, color = "DISPONIBLE", PH_DIM
     if data then label, color = knoxStatus(data) end
-    local lw = getTextManager():MeasureStringX(UIFont.Small, label)
+    local lw = measure(label, UIFont.Small)
     self:drawRectBorder(x + w - lw - 12, y + 3, lw + 12, 18, 1, color[1], color[2], color[3])
     text(self, label, x + w - lw - 6, y + 5, color)
 
@@ -436,7 +515,7 @@ function LPComputer:renderDetail(x, y, w)
         local tx = x + (ti - 1) * 92
         self:drawRectBorder(tx, cy, 84, 58, 1, INK[1], INK[2], INK[3])
         drawIcon(self, t[1], tx + 27, cy + 6, 30, INK)
-        local lw2 = getTextManager():MeasureStringX(UIFont.Small, t[2])
+        local lw2 = measure(t[2], UIFont.Small)
         text(self, t[2], tx + math.floor((84 - lw2) / 2), cy + 40, INK_SOFT)
     end
     cy = cy + 66
