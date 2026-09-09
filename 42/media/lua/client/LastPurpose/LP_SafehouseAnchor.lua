@@ -131,6 +131,17 @@ local function addCompletionSupplies(lootBag, data, lootTable)
                 print("[LastPurpose] Recompensa pendiente: " .. itemType)
                 return false
             end
+            -- El walkie de la banda arranca en su frecuencia (la de este
+            -- golpe). Las de otros golpes se anadiran al descubrir sus mapas.
+            if itemType == "LastPurpose.BandWalkieTalkie" then
+                pcall(function()
+                    local dd = item.getDeviceData and item:getDeviceData()
+                    if dd then
+                        if dd.setChannel then dd:setChannel(93300) end
+                        if dd.setIsTurnedOn then dd:setIsTurnedOn(false) end
+                    end
+                end)
+            end
             granted = granted + 1
             data.completionRewardItems[key] = granted
         end

@@ -161,7 +161,7 @@ LastPurpose.HEISTS = {
                 { type = "Base.DuctTape", count = 2 },
                 { type = "Base.Woodglue", count = 1 },
                 { type = "Base.PetrolCan", count = 1 },
-                { type = "Base.WalkieTalkie5", count = 1 },
+                { type = "LastPurpose.BandWalkieTalkie", count = 1 },
                 { type = "Base.CannedCornedBeef", count = 2 },
                 { type = "Base.CannedSardines", count = 2 },
             },

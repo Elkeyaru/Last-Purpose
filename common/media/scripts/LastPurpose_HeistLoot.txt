@@ -5,7 +5,7 @@ module LastPurpose
         DisplayCategory = Bag,
         ItemType = base:normal,
         Weight = 12.0,
-        Icon = DuffelBag_Grey,
+        IconsForTexture = DuffelBag_Grey,
         ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
         ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
         WorldStaticModel = DuffelBag_Ground,
@@ -16,7 +16,7 @@ module LastPurpose
         DisplayCategory = Bag,
         ItemType = base:container,
         Weight = 2.0,
-        Icon = DuffelBag_Grey,
+        IconsForTexture = DuffelBag_Grey,
         CanBeEquipped = base:back,
         CanHaveHoles = false,
         Capacity = 28,
@@ -31,5 +31,35 @@ module LastPurpose
         WeightReduction = 65,
         WorldStaticModel = DuffelBag_Ground,
         Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
+    }
+
+    /* Walkie de la banda: copia de Base.WalkieTalkie5 (militar). Item propio
+       para poder darle un nombre y, mas adelante, precargar las frecuencias
+       de otros golpes cuando se descubran los mapas. */
+    item BandWalkieTalkie
+    {
+        DisplayCategory = Communications,
+        ItemType = base:radio,
+        Weight = 1.5,
+        Icon = WalkieTalkieMilitary,
+        AttachmentType = Walkie,
+        BaseVolumeRange = 16,
+        DisappearOnUse = false,
+        IsHighTier = true,
+        IsPortable = true,
+        IsTelevision = false,
+        MaxChannel = 1000000,
+        MicRange = 5,
+        MinChannel = 200,
+        Tags = base:usesbattery,
+        Tooltip = Tooltip_item_Radio,
+        TransmitRange = 16000,
+        TwoWay = true,
+        UseDelta = 0.014,
+        UseWhileEquipped = false,
+        UsesBattery = true,
+        WorldObjectSprite = appliances_com_01_48,
+        StaticModel = WalkieTalkieUSArmy,
+        WorldStaticModel = WalkieTalkieUSArmy,
     }
 }

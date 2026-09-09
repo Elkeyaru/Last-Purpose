@@ -5,13 +5,11 @@ local BAG_TYPE = "LastPurpose.SealedKnoxBankLoot"
 local function SPAWN() return LastPurpose.World.BANK_LOOT_SPAWN end
 local PICKUP_CHECK_RADIUS = 80
 
--- Tinte de la bolsa del botin. El icono base ya es gris (Icon = DuffelBag_Grey
--- en el script), asi que aqui solo se aplica un multiplicador suave para
--- darle un matiz consistente sin oscurecerla. Antes era 0.08 (casi negro).
--- El modelo del suelo (WorldStaticModel) puede no respetar este color en
--- B42; si sigue saliendo tostado en el suelo habra que darle un
--- WorldObjectSprite/modelo propio.
-local LOOT_TINT = 0.85
+-- El icono de inventario ya es gris de verdad (IconsForTexture = DuffelBag_Grey
+-- en el script). No se aplica tinte (1.0 = neutro): un multiplicador sobre un
+-- gris ya lo oscurecia. Antes esto forzaba casi-negro (0.08) sobre el icono
+-- tostado por defecto.
+local LOOT_TINT = 1.0
 function LastPurpose.applyLootVisual(item)
     if not item then return end
     pcall(function()
@@ -127,8 +125,12 @@ function LastPurpose.updateHeistLoot(player)
     end
 end
 
--- Comprobacion ligera por fotograma, solo mientras el golpe esta activo y el
--- jugador esta cerca; se apaga sola en cuanto lootTaken pasa a true.
+-- Comprobacion mientras el golpe esta activo y el jugador esta cerca; se
+-- apaga sola en cuanto lootTaken pasa a true. El escaneo recursivo del
+-- inventario (findHeistLootBag) es lo caro, asi que se limita a ~4 veces
+-- por segundo en vez de en cada fotograma: quita el tiron al recoger la
+-- bolsa sin retrasar la deteccion de forma perceptible.
+local pickupTick = 0
 function LastPurpose.updateHeistLootPickup()
     local player = LastPurpose.getPlayerSafe(0)
     if not player or not LastPurpose.isBurglar(player) then return end
@@ -136,5 +138,7 @@ function LastPurpose.updateHeistLootPickup()
     if not LastPurpose.stageIs(data, "heist_active") then return end
     local dx, dy = player:getX() - SPAWN().x, player:getY() - SPAWN().y
     if dx * dx + dy * dy > PICKUP_CHECK_RADIUS * PICKUP_CHECK_RADIUS then return end
+    pickupTick = pickupTick + 1
+    if pickupTick % 15 ~= 0 then return end
     LastPurpose.updateHeistLoot(player)
 end

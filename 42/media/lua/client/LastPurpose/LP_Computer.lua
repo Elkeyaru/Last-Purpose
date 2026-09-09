@@ -398,9 +398,15 @@ function LPComputer:profWidgetNode()
     local p = PROFS[self.prof]
     local function cycle(d)
         return function()
-            self.prof = ((self.prof - 1 + d) % #PROFS) + 1
-            self.selectedId = (PROFS[self.prof].unlocked and "louisville_knox_bank")
-                or ("__locked_" .. PROFS[self.prof].id)
+            -- Envoltura con clamp explicito, NO modulo: `x % n` en Kahlua
+            -- puede dar un float (0.0/4.0) y `PROFS[4.0]` no encuentra la
+            -- clave entera 4 -> "attempted index: unlocked of non-table".
+            local n = (self.prof or 1) + d
+            if n < 1 then n = #PROFS elseif n > #PROFS then n = 1 end
+            self.prof = n
+            local prof = PROFS[n]
+            self.selectedId = (prof and prof.unlocked and "louisville_knox_bank")
+                or ("__locked_" .. (prof and prof.id or "?"))
             self:markDirty()
         end
     end
@@ -625,10 +631,33 @@ end
 
 -- ---- botones (solo la X; el CTA vive en el arbol) -----------------
 
+-- Fuerza la carga de todas las texturas y atlas antes del primer paint,
+-- para reducir el fotograma "tablero de ajedrez" (textura sin subir a GPU)
+-- al abrir el ordenador la primera vez.
+local PRELOADED = false
+local function preloadAssets(self)
+    if PRELOADED then return end
+    pcall(function()
+        tex("xcyos_chrome.png")
+        for n = 0, 16 do icon(n) end
+        for _, p in ipairs(PROFS) do tex("lp_prof_" .. p.id .. ".png") end
+        if KeyasUI and KeyasUI.measure then
+            for _, id in ipairs({ "lp_ui_14", "lp_ui_18", "lp_ui_30", "lp_mono_16" }) do
+                KeyasUI.measure("Mg", id)
+            end
+        end
+        if KeyasCSS and KeyasCSS.roundedRect then
+            KeyasCSS.roundedRect(self, -20, -20, 2, 2, 1, { r = 0, g = 0, b = 0, a = 0 })
+        end
+    end)
+    PRELOADED = true
+end
+
 function LPComputer:createChildren()
     ISPanel.createChildren(self)
     self:layout()
     ensureFontsRegistered()
+    preloadAssets(self)
 
     local cx, cy, cw, ch = self:zone(SKIN.titleClose)
     self.closeButton = ISButton:new(cx, cy, cw, ch, "", self, LPComputer.onClose)
