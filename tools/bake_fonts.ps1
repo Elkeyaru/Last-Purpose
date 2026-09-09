@@ -23,17 +23,33 @@
 
 param(
     [string]$OutDir = "$PSScriptRoot\..\42\media\ui\LastPurpose",
-    [string]$LuaOut = "$PSScriptRoot\..\42\media\lua\client\LastPurpose\LP_TermFontData.lua"
+    [string]$LuaOut = "$PSScriptRoot\..\42\media\lua\client\LastPurpose\LP_TermFontData.lua",
+    # VT323 (SIL OFL) - la fuente de terminal del mockup XCYOS. Sin instalar:
+    # se carga desde el .ttf del repo de assets.
+    [string]$FontFile = "$PSScriptRoot\..\..\..\Last Purpose\Assets Fuentes\VT323\VT323-Regular.ttf"
 )
 
 Add-Type -AssemblyName System.Drawing
 
-# family, pixel size, output basename, key in the LP_TermFontData table
+$pfc = $null
+$FontFamily = $null
+if (Test-Path $FontFile) {
+    $pfc = New-Object System.Drawing.Text.PrivateFontCollection
+    $pfc.AddFontFile((Resolve-Path $FontFile).Path)
+    $FontFamily = $pfc.Families[0]
+    Write-Host "loaded font: $($FontFamily.Name)  <- $FontFile"
+} else {
+    Write-Host "WARN: no font file at $FontFile - falling back to Consolas"
+}
+
+# size, output basename, key in the LP_TermFontData table. VT323 solo tiene
+# un peso: la jerarquia es puro tamano. Tamanos subidos respecto a un sans
+# porque el pixel-font pide mas cuerpo para leerse bien.
 $JOBS = @(
-    @{ Family = "Bahnschrift"; Size = 14; Name = "lp_ui_14"; Key = "ui14" },
-    @{ Family = "Bahnschrift"; Size = 18; Name = "lp_ui_18"; Key = "ui18" },
-    @{ Family = "Bahnschrift SemiBold"; Size = 30; Name = "lp_ui_30"; Key = "ui30" },
-    @{ Family = "Consolas"; Size = 16; Name = "lp_mono_16"; Key = "mono16" }
+    @{ Size = 20; Name = "lp_ui_14";   Key = "ui14" },   # etiquetas, eyebrows, badges, tiles
+    @{ Size = 24; Name = "lp_ui_18";   Key = "ui18" },   # cuerpo, filas de mision
+    @{ Size = 40; Name = "lp_ui_30";   Key = "ui30" },   # titulo del detalle
+    @{ Size = 22; Name = "lp_mono_16"; Key = "mono16" }  # numeros, barra de estado
 )
 $luaBlocks = New-Object System.Collections.Generic.List[string]
 
@@ -66,14 +82,16 @@ function Get-InkBounds([System.Drawing.Bitmap]$bmp) {
 }
 
 foreach ($job in $JOBS) {
-    $family = $job.Family; $size = [float]$job.Size; $name = $job.Name
+    $size = [float]$job.Size; $name = $job.Name
 
-    $font = $null
-    try { $font = New-Object System.Drawing.Font($family, $size, [System.Drawing.GraphicsUnit]::Pixel) }
-    catch { Write-Host "  (no '$family', falling back to Segoe UI)"; $font = New-Object System.Drawing.Font("Segoe UI", $size, [System.Drawing.GraphicsUnit]::Pixel) }
+    if ($FontFamily) {
+        $font = New-Object System.Drawing.Font($FontFamily, $size, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
+    } else {
+        $font = New-Object System.Drawing.Font("Consolas", $size, [System.Drawing.GraphicsUnit]::Pixel)
+    }
 
     # Measure a probe bitmap big enough for any single glyph at this size.
-    $cell = [int][Math]::Ceiling($size * 2.2)
+    $cell = [int][Math]::Ceiling($size * 2.4)
     $probe = New-Object System.Drawing.Bitmap $cell, $cell, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $pg = [System.Drawing.Graphics]::FromImage($probe)
     $pg.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit

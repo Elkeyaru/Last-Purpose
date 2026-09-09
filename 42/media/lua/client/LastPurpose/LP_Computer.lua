@@ -52,6 +52,35 @@ local APPS = {
     { id = "sistema",  label = "SISTEMA" },
 }
 
+-- Profesiones (solo lectura por ahora - hito 2). La primera es la del
+-- personaje (Ladron); el resto muestra su requisito y la lista bloqueada.
+local PROFS = {
+    { id = "ladron",    name = "LADRON",    unlocked = true },
+    { id = "medico",    name = "MEDICO",    req = "Completa el prologo del Ladron y sube Medicina a Nv. 2." },
+    { id = "ingeniero", name = "INGENIERO", req = "Completa el prologo del Ladron y sube Fabricacion a Nv. 2." },
+    { id = "veterano",  name = "VETERANO",  req = "Completa el prologo del Ladron y sube Punteria a Nv. 2." },
+}
+
+-- Notas del mundo (contenido estatico de solo lectura por ahora).
+local NOTES = {
+    { t = "Nota del punto de reunion",
+      d = "\"Los documentos siguen escondidos en el punto que marcamos en Louisville. Con esa nota sabremos donde guardaron el botin antes de evacuar.\"" },
+    { t = "Transmision interceptada",
+      d = "Seis lineas de un contacto sin nombre que repite el mensaje en la banda de bandidos cada media hora hasta que respondes." },
+    { t = "Recorte de prensa - Knox Bank",
+      d = "\"El banco mas grande de Kentucky cierra sus puertas ante la evacuacion de Louisville.\"" },
+}
+local ARCHIVES = {
+    { t = "Knox Bank - planta y perimetro",
+      d = "Coordenadas validadas en partida. Puertas y ventanas selladas hasta que empieza el golpe." },
+    { t = "Contacto - la voz de la radio",
+      d = "Sin nombre. Llama en la banda de bandidos. Sabe donde esta todo lo que dejaron atras." },
+    { t = "Catalogo de golpes - Louisville",
+      d = "Cuatro objetivos. Uno se elige por partida; el resto queda archivado hasta abrir nuevas ciudades." },
+    { t = "Refugio",
+      d = "La mesa con el ordenador fija tu base. Volver aqui despues de explorar una ciudad revela sus golpes." },
+}
+
 -- Paleta terminal (hex del mockup XCYOS).
 local DESKTOP   = { 0.106, 0.125, 0.118 }
 local WINFACE   = { 0.725, 0.714, 0.678 }
@@ -144,64 +173,76 @@ local RAIL_ON   = { 0.900, 1.000, 0.965 }     -- icono/etiqueta de la pestana ac
 local RAIL_OFF  = { 0.760, 0.790, 0.770 }     -- icono/etiqueta inactiva
 local RAIL_LBL_OFF = { 0.620, 0.660, 0.630 }
 
--- Hoja de estilos del CONTENIDO. Escrita en espacio 1920; KeyasCSS.parse la
--- escala por self.s en layout(). Un color de panel algo mas oscuro que la
--- cara de la ventana + borde visible + una sombra suave = profundidad sin
--- biseles inset (que ISUI no tiene).
+-- Hoja de estilos del CONTENIDO. Escrita en espacio 1927; KeyasCSS.parse la
+-- escala por self.sy en layout(). Panel un pelin mas claro que la cara de
+-- la ventana + borde + sombra suave = profundidad sin biseles inset.
+-- Fuentes: atlas de glifos VT323 (lp_ui_14/18/30, lp_mono_16) - un solo
+-- peso, la jerarquia es tamano.
 local CONTENT_CSS = [[
-  .root { display: flex; flex-direction: row; gap: 16px; height: 100%; }
+  .root { display: flex; flex-direction: row; gap: 18px; height: 100%; }
 
   .pane {
     background: #c4c1b6; border: 2px solid #6d6a61; border-radius: 6px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.28);
     overflow: hidden; height: 100%; display: flex; flex-direction: column;
   }
-  .list-pane { width: 360px; padding: 16px 10px 16px 16px; }
-  .detail-pane { flex-grow: 1; padding: 28px 36px; }
+  .list-pane { width: 420px; padding: 16px 12px 16px 16px; }
+  .detail-pane { flex-grow: 1; padding: 26px 36px; }
+
+  /* selector de profesion */
+  .prof {
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+    padding: 6px 4px 12px;
+  }
+  .prof-nav {
+    width: 34px; height: 44px; display: flex; flex-direction: row;
+    align-items: center; justify-content: center;
+    border: 1px solid #16160f; border-radius: 4px; background: #b9b6ad;
+    font: lp_ui_18; color: #16160f;
+  }
+  .prof-mid { flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .prof-ic { width: 40px; height: 40px; }
+  .prof-name { font: lp_ui_18; color: #16160f; }
+  .prof-tag { font: lp_ui_14; color: #1c8f7c; }
+  .prof-tag.lock { color: #9a5a1a; }
 
   .city { display: flex; flex-direction: column; margin-top: 16px; }
-  .city.first { margin-top: 2px; }
+  .city.first { margin-top: 4px; }
   .city-title { font: lp_ui_14; color: #16160f; padding-bottom: 4px; }
   .rule { height: 2px; background: #16160f; }
   .rule-soft { height: 1px; background: #8f8c82; }
-  .city-hint { font: lp_ui_14; color: #7c7a70; margin-top: 7px; }
+  .city-hint { font: lp_ui_14; color: #7c7a70; margin-top: 8px; }
 
-  .missions { display: flex; flex-direction: column; margin-top: 6px; }
+  .missions { display: flex; flex-direction: column; margin-top: 8px; }
   .m-row {
     display: flex; flex-direction: row; align-items: center; gap: 10px;
-    padding: 7px 10px 7px 10px; border-radius: 5px;
+    padding: 6px 10px 6px 9px; border-radius: 5px;
     border: 1px solid transparent; font: lp_ui_18; color: #16160f;
   }
-  .m-row .num { width: 26px; font: lp_mono_16; color: #4a473c; }
+  .m-row .num { width: 30px; font: lp_mono_16; color: #4a473c; }
   .m-row .m-name { flex-grow: 1; }
-  .m-row .dot { width: 11px; height: 11px; border-radius: 6px; }
+  .m-row .dot { width: 12px; height: 12px; border-radius: 6px; }
   .dot.ok    { background: #56b45a; }
   .dot.prog  { background: #ffb64a; }
   .dot.lock  { background: #7c7a70; }
   .dot.claim { background: #2fe7c4; }
   .m-row.locked { color: #7c7a70; }
   .m-row.locked .num { color: #7c7a70; }
-  .m-row.sel {
-    background: #223330; color: #eafffb;
-    border: 1px solid #2fe7c4;
-  }
+  .m-row.sel { background: #223330; color: #eafffb; border: 1px solid #2fe7c4; }
   .m-row.sel .num { color: #2fe7c4; }
 
   .d-head { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; }
-  .d-title { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+  .d-title { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
   .d-name { font: lp_ui_30; color: #16160f; }
   .d-city { font: lp_ui_14; color: #4a473c; }
-  .badge {
-    font: lp_ui_14; padding: 6px 12px; border-radius: 4px;
-    border: 1px solid #16160f;
-  }
+  .badge { font: lp_ui_14; padding: 6px 12px; border-radius: 4px; border: 1px solid #16160f; }
 
-  .sec { margin-top: 30px; display: flex; flex-direction: column; }
+  .sec { margin-top: 28px; display: flex; flex-direction: column; }
   .sec-h { font: lp_ui_14; color: #16160f; padding-bottom: 5px; }
   .sec .rule-soft { margin-bottom: 12px; }
   .grid { display: flex; flex-direction: row; gap: 28px; align-items: flex-start; }
-  .body { font: lp_ui_18; color: #16160f; line-height: 28px; flex-grow: 1; }
-  .body-soft { font: lp_ui_14; color: #4a473c; line-height: 22px; margin-top: 14px; }
+  .body { font: lp_ui_18; color: #16160f; line-height: 30px; flex-grow: 1; }
+  .body-soft { font: lp_ui_14; color: #4a473c; line-height: 26px; margin-top: 14px; }
 
   .map {
     width: 300px; height: 240px; border: 2px solid #16160f;
@@ -211,19 +252,19 @@ local CONTENT_CSS = [[
 
   .reward { display: flex; flex-direction: row; gap: 16px; margin-top: 10px; }
   .tile {
-    width: 152px; padding: 14px 10px 12px; border: 2px solid #16160f;
+    width: 160px; padding: 14px 10px 12px; border: 2px solid #16160f;
     border-radius: 6px; background: #b9b6ad;
     box-shadow: 4px 4px 0 rgba(22,22,15,0.65);
     display: flex; flex-direction: column; align-items: center; gap: 6px;
   }
-  .tile .ic { width: 40px; height: 34px; }
+  .tile .ic { width: 42px; height: 36px; }
   .tile .val { font: lp_mono_16; color: #16160f; }
   .tile .cap { font: lp_ui_14; color: #4a473c; }
 
   .action-row { display: flex; flex-direction: row; margin-top: 26px; }
   .cta {
     display: flex; flex-direction: row; align-items: center; gap: 14px;
-    padding: 12px 20px 12px 12px;
+    padding: 12px 22px 12px 12px;
     border: 2px solid #16160f; border-radius: 4px; background: #cbc8bf;
     box-shadow: 4px 4px 0 rgba(22,22,15,1);
     font: lp_ui_18; color: #16160f;
@@ -234,11 +275,23 @@ local CONTENT_CSS = [[
 
   .stub { flex-grow: 1; display: flex; flex-direction: column; }
   .stub .h { font: lp_ui_30; color: #16160f; }
-  .stub .p { font: lp_ui_18; color: #4a473c; line-height: 26px; margin-top: 14px; }
-  .stub .k {
-    font: lp_mono_16; color: #16160f; margin-top: 16px;
-    border: 1px solid #16160f; border-radius: 3px; background: #cbc8bf;
-    padding: 6px 12px;
+  .stub .p { font: lp_ui_18; color: #4a473c; line-height: 30px; margin-top: 12px; max-width: 780px; }
+
+  .doc-list { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .doc {
+    display: flex; flex-direction: row; gap: 14px; align-items: flex-start;
+    border: 1px solid #6d6a61; border-radius: 4px; background: #b9b6ad;
+    padding: 12px 14px; max-width: 900px;
+  }
+  .doc-ic { width: 26px; height: 26px; }
+  .doc-txt { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
+  .doc-t { font: lp_ui_14; color: #16160f; }
+  .doc-d { font: lp_ui_14; color: #4a473c; line-height: 24px; }
+
+  .note-card {
+    margin-top: 20px; max-width: 820px;
+    border: 1px solid #1c8f7c; border-radius: 4px; background: #c9c6bc;
+    padding: 14px 16px; font: lp_ui_14; color: #16160f; line-height: 26px;
   }
 ]]
 
@@ -257,9 +310,18 @@ function LPComputer:new()
     o.background = false
     o.moveWithMouse = false
     o.app = "misiones"
+    o.prof = 1
     o.selectedId = "louisville_knox_bank"
     o.appHitboxes = {}
+    o._treeDirty = true
     return o
+end
+
+-- Marca el arbol de contenido para reconstruirse en el proximo paint().
+-- Se llama al cambiar de app, de mision seleccionada o de profesion, no en
+-- cada frame -> sin lag al clicar (no se reasigna un arbol nuevo por frame).
+function LPComputer:markDirty()
+    self._treeDirty = true
 end
 
 function LPComputer:zone(bake)
@@ -326,10 +388,57 @@ local function dotClass(label)
     return "prog"
 end
 
+-- Selector de profesion: icono + nombre + flechas. Solo lectura: cambiar de
+-- profesion cambia lo que se ve (las bloqueadas muestran su requisito).
+function LPComputer:profWidgetNode()
+    local p = PROFS[self.prof]
+    local function cycle(d)
+        return function()
+            self.prof = ((self.prof - 1 + d) % #PROFS) + 1
+            self.selectedId = (PROFS[self.prof].unlocked and "louisville_knox_bank")
+                or ("__locked_" .. PROFS[self.prof].id)
+            self:markDirty()
+        end
+    end
+    return { tag = "div", class = "prof", children = {
+        { tag = "div", class = "prof-nav", onClick = cycle(-1), children = { { tag = "div", text = "<" } } },
+        { tag = "div", class = "prof-mid", children = {
+            { tag = "div", class = "prof-ic", onPaint = function(node, owner, x, y, w, h)
+                local t = tex("lp_prof_" .. p.id .. ".png")
+                local s = math.min(w, h)
+                if t then owner:drawTextureScaled(t, math.floor(x + (w - s) / 2), y, s, s, 1,
+                    RAIL_ON[1], RAIL_ON[2], RAIL_ON[3]) end
+            end },
+            { tag = "div", class = "prof-name", text = p.name },
+            { tag = "div", class = p.unlocked and "prof-tag" or "prof-tag lock",
+              text = p.unlocked and "PERFIL ACTIVO" or "LINEA BLOQUEADA" },
+        }},
+        { tag = "div", class = "prof-nav", onClick = cycle(1), children = { { tag = "div", text = ">" } } },
+    }}
+end
+
 function LPComputer:listPaneNode()
+    local p = PROFS[self.prof]
+    local children = { self:profWidgetNode(), { tag = "div", class = "rule-soft" } }
+
+    if not p.unlocked then
+        children[#children + 1] = { tag = "div", class = "city first", children = {
+            { tag = "div", class = "city-title", text = "LINEA BLOQUEADA" },
+            { tag = "div", class = "rule" },
+            { tag = "div", class = "city-hint", text = p.req or "" },
+            { tag = "div", class = "missions", children = {
+                { tag = "div", class = "m-row locked sel", children = {
+                    { tag = "div", class = "num", text = "-" },
+                    { tag = "div", class = "m-name", text = REDACTED },
+                    { tag = "div", class = "dot lock" },
+                }},
+            }},
+        }}
+        return { tag = "div", class = "pane list-pane", children = children }
+    end
+
     local player = LastPurpose.getPlayerSafe(0)
     local data = player and LastPurpose.getData(player)
-    local children = {}
     for gi, group in ipairs(CATALOG) do
         local rows = {}
         for i, row in ipairs(group.rows) do
@@ -340,10 +449,7 @@ function LPComputer:listPaneNode()
             local dot = row.unlocked and (data and dotClass((knoxStatus(data))) or "prog") or "lock"
             local rid = row.id
             rows[#rows + 1] = { tag = "div", class = cls, key = rid,
-                onClick = function()
-                    self.selectedId = rid
-                    self:refreshAction()
-                end,
+                onClick = function() self.selectedId = rid; self:markDirty() end,
                 children = {
                     { tag = "div", class = "num", text = i .. "." },
                     { tag = "div", class = "m-name", text = row.unlocked and row.name or REDACTED },
@@ -357,13 +463,35 @@ function LPComputer:listPaneNode()
         }
         if group.hint then kids[#kids + 1] = { tag = "div", class = "city-hint", text = group.hint } end
         kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
-        children[#children + 1] = { tag = "div", class = (gi == 1) and "city first" or "city", children = kids }
+        children[#children + 1] = { tag = "div", class = "city", children = kids }
     end
     return { tag = "div", class = "pane list-pane", children = children }
 end
 
 function LPComputer:detailPaneNode()
     local player = LastPurpose.getPlayerSafe(0)
+
+    -- Profesion bloqueada: expediente clasificado con su requisito.
+    local prof = PROFS[self.prof]
+    if not prof.unlocked then
+        return { tag = "div", class = "pane detail-pane", children = {
+            { tag = "div", class = "d-head", children = {
+                { tag = "div", class = "d-title", children = {
+                    { tag = "div", class = "d-name", text = prof.name },
+                    { tag = "div", class = "d-city", text = "LINEA DE PROFESION - CLASIFICADA" },
+                }},
+                { tag = "div", class = "badge", text = "BLOQUEADA", style = {
+                    color = "#5f5d54", backgroundColor = "#c7c4ba", borderColor = "#16160f" } },
+            }},
+            { tag = "div", class = "sec", children = {
+                { tag = "div", class = "sec-h", text = "REQUISITO" },
+                { tag = "div", class = "rule-soft" },
+                { tag = "div", class = "body", text = prof.req or "Avanza en la historia." },
+                { tag = "div", class = "body-soft", text = "Sus golpes y su prologo se abren al cumplir el requisito." },
+            }},
+        }}
+    end
+
     local row, group = self:selectedRow()
     if not row then return { tag = "div", class = "pane detail-pane" } end
 
@@ -444,26 +572,44 @@ function LPComputer:detailPaneNode()
     }}
 end
 
-function LPComputer:stubNode()
-    local title, body, key
-    if self.app == "notas" then
-        title = "NOTAS"
-        body = "Las notas cifradas que recogiste en el mundo aparecen aca una vez leidas. El diario de mision (tecla J) sigue siendo aparte: solo se abre en el prologo y con una mision activa."
-    elseif self.app == "archivos" then
-        title = "ARCHIVOS"
-        body = "Intel acumulada: planos parciales del Knox Bank, contacto de la radio, catalogo de golpes de Louisville. La mesa con ordenador fija tu refugio."
-    else
-        title = "SISTEMA"
-        body = "Opciones del mod (Opciones > Mods > Last Purpose). El registro de depuracion esta " ..
-            (LastPurpose.DEBUG and "activado" or "desactivado") .. ". XCYOS v1.0.3 - Last Purpose Terminal."
-        key = "Tecla del diario:  J"
+local function docListNode(items)
+    local docs = {}
+    for _, it in ipairs(items) do
+        docs[#docs + 1] = { tag = "div", class = "doc", children = {
+            { tag = "div", class = "doc-ic", onPaint = function(node, owner, x, y, w, h)
+                local s = math.min(w, h)
+                drawIcon(owner, IC.notas, math.floor(x), y, math.floor(s), INK_SOFT)
+            end },
+            { tag = "div", class = "doc-txt", children = {
+                { tag = "div", class = "doc-t", text = it.t },
+                { tag = "div", class = "doc-d", text = it.d },
+            }},
+        }}
     end
-    local kids = {
-        { tag = "div", class = "h", text = title },
-        { tag = "div", class = "p", text = body },
-    }
-    if key then kids[#kids + 1] = { tag = "div", class = "k", text = key } end
-    return { tag = "div", class = "pane detail-pane", children = { { tag = "div", class = "stub", children = kids } } }
+    return { tag = "div", class = "doc-list", children = docs }
+end
+
+function LPComputer:stubNode()
+    if self.app == "notas" then
+        return { tag = "div", class = "pane detail-pane", children = { { tag = "div", class = "stub", children = {
+            { tag = "div", class = "h", text = "NOTAS" },
+            { tag = "div", class = "p", text = "Las notas y papeles que recogiste en el mundo. Se leen con la accion de lectura del juego antes de aparecer aqui completas." },
+            docListNode(NOTES),
+            { tag = "div", class = "note-card", text = "Diario de mision (tecla J). El libro de cuero con el indice de capitulos existe aparte de este terminal. Solo se abre durante el prologo y con una mision activa." },
+        }}}}
+    elseif self.app == "archivos" then
+        return { tag = "div", class = "pane detail-pane", children = { { tag = "div", class = "stub", children = {
+            { tag = "div", class = "h", text = "ARCHIVOS" },
+            { tag = "div", class = "p", text = "Intel acumulada. Planos parciales, contactos y todo lo que sobrevivio a la evacuacion." },
+            docListNode(ARCHIVES),
+        }}}}
+    else
+        return { tag = "div", class = "pane detail-pane", children = { { tag = "div", class = "stub", children = {
+            { tag = "div", class = "h", text = "SISTEMA" },
+            { tag = "div", class = "p", text = "XCYOS v1.0.3 - Last Purpose Terminal. Reemplaza la mesa de planificacion: eliges el golpe aqui y, al volver del golpe, entregas el botin aqui." },
+            { tag = "div", class = "note-card", text = "Las opciones del mod (tecla del diario, registro de depuracion, etc.) estan en el menu del juego: Opciones > Mods > Last Purpose. No se configuran desde este terminal." },
+        }}}}
+    end
 end
 
 function LPComputer:contentTree()
@@ -490,11 +636,6 @@ function LPComputer:createChildren()
     self:addChild(self.closeButton)
 end
 
-function LPComputer:refreshAction()
-    -- El CTA se reconstruye con el arbol cada frame; nada que hacer aqui,
-    -- pero se conserva el metodo porque lo llaman los onClick de las filas.
-end
-
 function LPComputer:onAction()
     local player = LastPurpose.getPlayerSafe(0)
     if not player then return end
@@ -503,6 +644,8 @@ function LPComputer:onAction()
     if not ok then print("[LastPurpose] ERROR al entregar el botin desde el ordenador") end
     if LastPurpose.stageIs(LastPurpose.getData(player), "completed") then
         self:onClose()
+    else
+        self:markDirty()
     end
 end
 
@@ -517,7 +660,7 @@ end
 function LPComputer:onMouseDown(x, y)
     for _, hb in ipairs(self.appHitboxes or {}) do
         if x >= hb.x and x <= hb.x + hb.w and y >= hb.y and y <= hb.y + hb.h then
-            self.app = hb.id
+            if self.app ~= hb.id then self.app = hb.id; self:markDirty() end
             return true
         end
     end
@@ -572,8 +715,9 @@ function LPComputer:paint()
     -- para todas las apps.
     do
         local tx, ty, tw, th = self:zone(SKIN.titleText)
+        local _, lh = KeyasUI.measure("Mg", "lp_ui_18")
         KeyasUI.text(self, TITLE_BY_APP[self.app] or "LAST PURPOSE",
-            tx, ty + math.floor(th * 0.16),
+            tx, ty + math.floor((th - (lh or 22)) / 2),
             { r = TITLE_INK[1], g = TITLE_INK[2], b = TITLE_INK[3], a = 1 }, "lp_ui_18")
     end
 
@@ -599,15 +743,25 @@ function LPComputer:paint()
             { r = lc[1], g = lc[2], b = lc[3], a = 1 }, "lp_ui_14")
     end
 
+    -- Contenido KeyasCSS. El arbol solo se reconstruye/re-maqueta cuando
+    -- cambia el estado o el tamano (no cada frame): asi no hay lag al
+    -- clicar entre opciones. Cada frame solo se re-pinta el arbol cacheado.
     local cx, cy, cw, chh = self:zone(SKIN.content)
-    local ok, tree = pcall(function()
-        local t = KeyasCSS.node(self:contentTree())
-        t:resolve(self.sheet)
-        t:layout(cx, cy, cw, chh)
-        t:paint(self)
-        return t
-    end)
-    self._contentTree = ok and tree or nil
+    local rectKey = cx .. "," .. cy .. "," .. cw .. "," .. chh
+    if self._treeDirty or not self._contentTree or self._rectKey ~= rectKey then
+        local ok, tree = pcall(function()
+            local t = KeyasCSS.node(self:contentTree())
+            t:resolve(self.sheet)
+            t:layout(cx, cy, cw, chh)
+            return t
+        end)
+        self._contentTree = ok and tree or nil
+        self._treeDirty = false
+        self._rectKey = rectKey
+    end
+    if self._contentTree then
+        pcall(function() self._contentTree:paint(self) end)
+    end
 end
 
 -- ---- apertura desde el menu contextual de la mesa ---------------
@@ -640,16 +794,22 @@ if not LastPurpose.computerKeyHook then
             LastPurpose.computer:onClose()
             return
         end
-        -- E abre la GUI si el jugador esta junto a la mesa (como los
-        -- vehiculos). No hace nada si ya esta abierta, si el jugador no es
-        -- Ladron, o si hay un menu contextual del mundo abierto.
+        -- E abre la GUI SOLO si el jugador esta pegado a la mesa (casilla
+        -- adyacente, como interactuar con un vehiculo). No hace nada si ya
+        -- esta abierta, si no es Ladron, o si hay un menu contextual abierto.
         if key == Keyboard.KEY_E and not LastPurpose.computer then
             local ok = pcall(function()
                 local player = LastPurpose.getPlayerSafe(0)
                 if not player or player:isDead() then return end
                 if not LastPurpose.isBurglar(player) then return end
                 if ISContextMenu and ISContextMenu.instance and ISContextMenu.instance.visibleCheck then return end
-                if not (LastPurpose.findNearbyTable and LastPurpose.findNearbyTable(player)) then return end
+                if not LastPurpose.findNearbyTable then return end
+                local sq = select(1, LastPurpose.findNearbyTable(player))
+                if not sq then return end
+                -- adyacente: centro de la casilla de la mesa a <= ~1.5 tiles
+                local dx = (sq:getX() + 0.5) - player:getX()
+                local dy = (sq:getY() + 0.5) - player:getY()
+                if (dx * dx + dy * dy) > 2.5 then return end
                 LastPurpose.openComputer(player)
             end)
             if not ok then LastPurpose.debugPrint("Fallo el atajo E de la mesa") end
