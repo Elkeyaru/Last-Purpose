@@ -237,6 +237,12 @@ function LastPurpose.reviewHeistLoot(player)
 
     LastPurpose.setStage(data, "completed")
     data.safehouseReturned = true
+    -- Hito 2: archivar el golpe para el desbloqueo en cadena del hub.
+    if data.selectedHeist then
+        data.completedHeists = data.completedHeists or {}
+        data.completedHeists[data.selectedHeist] = true
+        data.activeHeistId = nil
+    end
 
     if HaloTextHelper then
         local nimbleGranted = (tonumber(data.completionNimbleLevelsGranted) or 0) - nimbleBefore

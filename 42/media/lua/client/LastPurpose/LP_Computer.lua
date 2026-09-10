@@ -27,23 +27,9 @@ LastPurpose = LastPurpose or {}
 
 local REDACTED = "?????????"
 
-local CATALOG = {
-    { city = "LOUISVILLE", rows = {
-        { id = "louisville_knox_bank", name = "El ultimo golpe", unlocked = true },
-        { id = "last_exhibition",   name = "La ultima exposicion" },
-        { id = "penthouse_fortune", name = "El cielo tiene dueno" },
-        { id = "zero_kilometers",   name = "Cero kilometros" },
-    }},
-    { city = "WEST POINT", hint = "Explora West Point y vuelve a tu refugio.", rows = {
-        { id = "wp1" }, { id = "wp2" },
-    }},
-    { city = "RIVERSIDE", hint = "Explora Riverside y vuelve a tu refugio.", rows = {
-        { id = "rv1" }, { id = "rv2" },
-    }},
-    { city = "ROSEWOOD", hint = "Explora Rosewood y vuelve a tu refugio.", rows = {
-        { id = "rw1" }, { id = "rw2" },
-    }},
-}
+-- Orden en que se muestran las ciudades en la lista (las que tengan
+-- entradas en LastPurpose.CATALOG).
+local CITY_ORDER = { "LOUISVILLE", "WEST_POINT", "RIVERSIDE", "ROSEWOOD", "MARCH_RIDGE", "MULDRAUGH" }
 
 local APPS = {
     { id = "misiones", label = "MISIONES" },
@@ -376,20 +362,54 @@ end
 
 -- ---- arbol de contenido (KeyasCSS) ---------------------------------
 
+-- Entrada del catalogo real (LastPurpose.CATALOG) por id.
 function LPComputer:selectedRow()
-    for _, group in ipairs(CATALOG) do
-        for _, row in ipairs(group.rows) do
-            if row.id == self.selectedId then return row, group end
-        end
-    end
-    return nil, nil
+    local entry = LastPurpose.CATALOG_BY_ID and LastPurpose.CATALOG_BY_ID[self.selectedId or ""]
+    if not entry then return nil, nil end
+    return entry, LastPurpose.CITIES and LastPurpose.CITIES[entry.city]
 end
 
-local function dotClass(label)
-    if label == "ARCHIVADA" then return "ok"
-    elseif label == "BOTIN PENDIENTE" then return "claim"
-    elseif label == "EN CURSO" then return "prog" end
-    return "prog"
+-- estado calculado ("done"/"active"/"available"/"locked") -> clase del punto.
+local function statusDot(status, data)
+    if status == "done" then return "ok"
+    elseif status == "available" then return "ok"
+    elseif status == "locked" then return "lock"
+    elseif status == "active" then
+        if data and LastPurpose.stageIs(data, "review_loot") then return "claim" end
+        return "prog"
+    end
+    return "lock"
+end
+
+-- estado -> etiqueta del badge del detalle.
+local function statusLabel(status, data)
+    if status == "done" then return "ARCHIVADA" end
+    if status == "available" then return "DISPONIBLE" end
+    if status == "locked" then return "BLOQUEADA" end
+    if status == "active" and data then
+        return (knoxStatus(data))
+    end
+    return "EN CURSO"
+end
+
+-- Elegir un golpe disponible e implementado como el activo (uno a la vez).
+function LPComputer:onSelectHeist(id)
+    local player = LastPurpose.getPlayerSafe(0)
+    if not player then return end
+    local data = LastPurpose.getData(player)
+    if data.selectedHeist and data.selectedHeist ~= id
+        and data.stage and data.stage ~= "inactive" and data.stage ~= "completed" then
+        return  -- ya hay un golpe en curso
+    end
+    local entry = LastPurpose.CATALOG_BY_ID and LastPurpose.CATALOG_BY_ID[id]
+    if not entry or not entry.implemented then return end
+    local st = LastPurpose.heistStatus(id, data, player)
+    if st ~= "available" then return end
+    data.selectedHeist = id
+    data.activeHeistId = id
+    LastPurpose.showThought(player, { "Elegido. Manos a la obra." })
+    LastPurpose.debugPrint("Golpe elegido desde el ordenador: " .. tostring(id))
+    self:markDirty()
 end
 
 -- Selector de profesion: icono + nombre + flechas. Solo lectura: cambiar de
@@ -449,31 +469,45 @@ function LPComputer:listPaneNode()
 
     local player = LastPurpose.getPlayerSafe(0)
     local data = player and LastPurpose.getData(player)
-    for gi, group in ipairs(CATALOG) do
-        local rows = {}
-        for i, row in ipairs(group.rows) do
-            local sel = row.id == self.selectedId
-            local cls = "m-row"
-            if not row.unlocked then cls = cls .. " locked" end
-            if sel then cls = cls .. " sel" end
-            local dot = row.unlocked and (data and dotClass((knoxStatus(data))) or "prog") or "lock"
-            local rid = row.id
-            rows[#rows + 1] = { tag = "div", class = cls, key = rid,
-                onClick = function() self.selectedId = rid; self:markDirty() end,
-                children = {
-                    { tag = "div", class = "num", text = i .. "." },
-                    { tag = "div", class = "m-name", text = row.unlocked and row.name or REDACTED },
-                    { tag = "div", class = "dot " .. dot },
-                },
+
+    -- Una seccion por ciudad con entradas en LastPurpose.CATALOG, en el
+    -- orden de CITY_ORDER. Cada golpe muestra su estado calculado
+    -- (LastPurpose.heistStatus): done/active/available con su nombre real,
+    -- locked oculto con "?????????" y el motivo como pista de la ciudad.
+    for _, cityKey in ipairs(CITY_ORDER) do
+        local list = LastPurpose.CATALOG_BY_CITY and LastPurpose.CATALOG_BY_CITY[cityKey]
+        if list and #list > 0 then
+            local city = LastPurpose.CITIES and LastPurpose.CITIES[cityKey]
+            local rows = {}
+            local firstReason
+            for i, entry in ipairs(list) do
+                local status, reason = LastPurpose.heistStatus(entry.id, data, player)
+                local locked = (status == "locked")
+                if i == 1 and locked then firstReason = reason end
+                local sel = entry.id == self.selectedId
+                local cls = "m-row"
+                if locked then cls = cls .. " locked" end
+                if sel then cls = cls .. " sel" end
+                local rid = entry.id
+                rows[#rows + 1] = { tag = "div", class = cls, key = rid,
+                    onClick = function() self.selectedId = rid; self:markDirty() end,
+                    children = {
+                        { tag = "div", class = "num", text = i .. "." },
+                        { tag = "div", class = "m-name", text = locked and REDACTED or entry.name },
+                        { tag = "div", class = "dot " .. statusDot(status, data) },
+                    },
+                }
+            end
+            local kids = {
+                { tag = "div", class = "city-title", text = (city and city.label) or cityKey },
+                { tag = "div", class = "rule" },
             }
+            if firstReason then
+                kids[#kids + 1] = { tag = "div", class = "city-hint", text = firstReason }
+            end
+            kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
+            children[#children + 1] = { tag = "div", class = "city", children = kids }
         end
-        local kids = {
-            { tag = "div", class = "city-title", text = group.city },
-            { tag = "div", class = "rule" },
-        }
-        if group.hint then kids[#kids + 1] = { tag = "div", class = "city-hint", text = group.hint } end
-        kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
-        children[#children + 1] = { tag = "div", class = "city", children = kids }
     end
     return { tag = "div", class = "pane list-pane", children = children }
 end
@@ -502,30 +536,52 @@ function LPComputer:detailPaneNode()
         }}
     end
 
-    local row, group = self:selectedRow()
+    local row, city = self:selectedRow()
     if not row then return { tag = "div", class = "pane detail-pane" } end
 
-    if not row.unlocked then
+    local data = player and LastPurpose.getData(player)
+    local status, reason = LastPurpose.heistStatus(row.id, data, player)
+
+    -- Bloqueada: expediente clasificado con el motivo real.
+    if status == "locked" then
         return { tag = "div", class = "pane detail-pane", children = {
             { tag = "div", class = "d-head", children = {
                 { tag = "div", class = "d-title", children = {
                     { tag = "div", class = "d-name", text = REDACTED },
                     { tag = "div", class = "d-city", text = "EXPEDIENTE CLASIFICADO" },
                 }},
+                { tag = "div", class = "badge", text = "BLOQUEADA", style = {
+                    color = "#5f5d54", backgroundColor = "#c7c4ba", borderColor = "#16160f" } },
             }},
             { tag = "div", class = "sec", children = {
                 { tag = "div", class = "sec-h", text = "OBJETIVO" },
                 { tag = "div", class = "rule-soft" },
-                { tag = "div", class = "body", text = "Nombre y detalles ocultos. Cumpli el requisito para que el expediente se abra." },
-                { tag = "div", class = "body-soft", text = "Requisito: " .. ((group and group.hint) or "Avanza en la historia.") },
+                { tag = "div", class = "body", text = "Nombre y detalles ocultos hasta cumplir el requisito." },
+                { tag = "div", class = "body-soft", text = "Requisito: " .. tostring(reason or "Avanza en la historia.") },
             }},
         }}
     end
 
     local heist = LastPurpose.getHeist(row.id)
-    local data = player and LastPurpose.getData(player)
-    local label, color, ctaText, ctaOn = "DISPONIBLE", PH_DIM, "En preparacion", false
-    if data then label, color, ctaText, ctaOn = knoxStatus(data) end
+
+    -- Badge + CTA por estado. "active" reutiliza el flujo de knoxStatus
+    -- (entregar botin / seguir en el diario); "available"+implemented deja
+    -- elegir el golpe; "available" sin implementar sale como "proximamente";
+    -- "done" queda archivado.
+    local label, color, ctaText, ctaOn, ctaFn = "DISPONIBLE", PH_DIM, "Seleccionar este golpe", false, nil
+    if status == "active" and data then
+        label, color, ctaText, ctaOn = knoxStatus(data)
+        ctaFn = function() self:onAction() end
+    elseif status == "done" then
+        label, color, ctaText, ctaOn = "ARCHIVADA", OKC, "Archivada", false
+    elseif status == "available" then
+        if row.implemented then
+            label, color, ctaText, ctaOn = "DISPONIBLE", OKC, "Seleccionar este golpe", true
+            ctaFn = function() self:onSelectHeist(row.id) end
+        else
+            label, color, ctaText, ctaOn = "PROXIMAMENTE", PH_DIM, "Proximamente", false
+        end
+    end
 
     local function hx(r, g, b) return string.format("#%02x%02x%02x",
         math.max(0, math.min(255, math.floor(r))), math.max(0, math.min(255, math.floor(g))),
@@ -548,7 +604,7 @@ function LPComputer:detailPaneNode()
 
     local cta = { tag = "div", class = "action-row", children = {
         { tag = "div", class = ctaOn and "cta on" or "cta off",
-          onClick = ctaOn and function() self:onAction() end or nil,
+          onClick = (ctaOn and ctaFn) or nil,
           children = {
               { tag = "div", class = "ic", onPaint = paintIcon("finger") },
               { tag = "div", text = ctaText },
@@ -559,7 +615,7 @@ function LPComputer:detailPaneNode()
         { tag = "div", class = "d-head", children = {
             { tag = "div", class = "d-title", children = {
                 { tag = "div", class = "d-name", text = row.name },
-                { tag = "div", class = "d-city", text = (heist and heist.destination) or "Knox Bank, Louisville" },
+                { tag = "div", class = "d-city", text = (heist and heist.destination) or row.short or "Knox Bank, Louisville" },
             }},
             { tag = "div", class = "badge", text = label, style = badgeStyle },
         }},
@@ -569,7 +625,7 @@ function LPComputer:detailPaneNode()
             { tag = "div", class = "grid", children = {
                 { tag = "div", class = "body", text = (heist and heist.mission)
                     or "Adelantarse a la competencia. El banco mas grande de Kentucky, con la camara acorazada llena y las alarmas caidas por la evacuacion." },
-                { tag = "div", class = "map", onPaint = paintMap((group and group.city) or "LOUISVILLE") },
+                { tag = "div", class = "map", onPaint = paintMap((city and city.label) or "LOUISVILLE") },
             }},
         }},
         { tag = "div", class = "sec", children = {

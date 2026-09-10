@@ -7,7 +7,32 @@ referencia histórica.
 
 ## Sin publicar
 
-(nada pendiente de publicar)
+### Hito 2 del hub — desbloqueo de golpes
+
+- **`LP_Heists` — catálogo real del hub** (`LastPurpose.CATALOG`, 9 entradas
+  semilla; objetivo ~19 para el Ladrón). Cada golpe declara `city`, `order`,
+  `unlock` (`start` / `completePrev` / `cityKnown` / `profession`) e
+  `implemented`. Índices derivados `CATALOG_BY_ID` y `CATALOG_BY_CITY`
+  (ordenado). `LastPurpose.CITIES` describe 6 ciudades con su `bbox` y sus
+  mapas vanilla. **Los bbox son aproximados: hay que calibrarlos en partida**
+  con `LastPurpose.debugCityAt(player)`.
+- **`LastPurpose.heistStatus(id, data, player)`** calcula
+  `done` / `active` / `available` / `locked` (+ motivo). Louisville es una
+  cadena de 3: completar uno abre el siguiente. Las otras ciudades se abren
+  al **haber estado en la ciudad** (`data.citiesVisited`) o **llevar su mapa
+  vanilla** en el inventario.
+- **`LP_Unlocks.lua`** (cliente, una vez por minuto): marca
+  `data.citiesVisited[<CIUDAD>]` al entrar al bbox y mantiene
+  `data.completedHeists` / `data.activeHeistId`. Un solo golpe activo a la
+  vez (una sola máquina de etapas `data.stage`). `reviewHeistLoot` también
+  archiva el golpe al llegar a `completed`.
+- **`LP_Computer` cableado al catálogo real.** La lista agrupa por ciudad
+  (orden fijo), los puntos y el badge salen de `heistStatus`, los golpes
+  bloqueados salen como `?????????` con su motivo, y el CTA del detalle
+  depende del estado: `available` + `implemented` → **Seleccionar este
+  golpe** (lo pone activo, bloqueado si ya hay uno en curso); `available`
+  sin implementar → **Próximamente**; `active` → flujo de entrega del botín
+  de siempre; `done` → **Archivada**.
 
 ## 1.3.0 — 2026-09-09
 
@@ -94,11 +119,13 @@ del banco y la escena de la nota cambiaron internamente.
   banco** (`KeyasLib.DEBUG = true` y mirar el conteo).
 
 ### Pendiente (hito 2 del hub)
-- Lógica de desbloqueo real: Louisville en cadena (completar uno abre el
-  siguiente, 3 en total); otras ciudades gated por «haber estado allí» o
-  tener el mapa vanilla de la región; líneas de profesión por prólogo +
-  Nv. 2 de habilidad. Objetivo ~19 golpes para el Ladrón. El catálogo del
-  ordenador pasará a `status` calculado, no hardcodeado.
+- Calibrar los `bbox` de `LastPurpose.CITIES` caminando cada pueblo en
+  partida (`LastPurpose.debugCityAt`).
+- Cablear el requisito real de las líneas de profesión (`unlock` de tipo
+  `profession`: prólogo + Nv. 2 de habilidad) — hoy es un *placeholder*
+  bloqueado.
+- Implementar los golpes `implemented=false` del catálogo (contenido en
+  `narrative-drafts/`).
 - Scroll en la lista de misiones si algún día no cabe (KeyasCSS aún no
   tiene scroll).
 

@@ -10,6 +10,7 @@ require "LastPurpose/LP_BankSecurity"
 require "LastPurpose/LP_HeistLoot"
 require "LastPurpose/LP_HeistEscape"
 require "LastPurpose/LP_SafehouseAnchor"
+require "LastPurpose/LP_Unlocks"
 require "LastPurpose/LP_Computer"
 require "LastPurpose/LP_Tracker"
 
@@ -25,6 +26,7 @@ if not LastPurpose.eventsRegistered then
     end)
     Events.EveryOneMinute.Add(LastPurpose.updateHeistMapAndArrival)
     Events.EveryOneMinute.Add(LastPurpose.updateInvestigation)
+    Events.EveryOneMinute.Add(LastPurpose.updateHubUnlocks)
     Events.EveryOneMinute.Add(LastPurpose.updateBankSecurity)
     Events.EveryOneMinute.Add(LastPurpose.updateSafehouseAnchor)
     Events.EveryOneMinute.Add(LastPurpose.refreshHeistEscape)

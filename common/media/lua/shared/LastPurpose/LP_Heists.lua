@@ -304,7 +304,11 @@ function LastPurpose.heistStatus(id, data, player)
     if data.completedHeists and data.completedHeists[entry.id] then
         return "done", nil
     end
-    if data.activeHeistId == entry.id then
+    -- Activo: el golpe elegido mientras su maquina de etapas corre (o el
+    -- activeHeistId que mantiene LP_Unlocks, por si el tick aun no paso).
+    local running = data.stage and data.stage ~= "inactive" and data.stage ~= "completed"
+    if data.activeHeistId == entry.id
+        or (running and data.selectedHeist == entry.id) then
         return "active", nil
     end
 
