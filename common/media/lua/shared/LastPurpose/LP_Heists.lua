@@ -177,6 +177,164 @@ LastPurpose.HEISTS = {
 
 LastPurpose.HEIST_ORDER = { "louisville_knox_bank" }
 
+-- ===== Hito 2: ciudades y catalogo de desbloqueo =====
+--
+-- Cada golpe pertenece a una CITY y tiene un ORDER dentro de esa ciudad
+-- (cadena: completar el order N abre el N+1) y una spec UNLOCK:
+--   { type = "start" }                       -- disponible desde el principio
+--   { type = "completePrev" }                -- al completar el golpe anterior de su ciudad
+--   { type = "cityKnown" }                   -- al haber estado en la ciudad O tener su mapa
+--   { type = "profession", skill=, level=, prologue=true }
+-- El estado ("done"/"active"/"available"/"locked") se CALCULA, nunca se
+-- guarda (ver LastPurpose.heistStatus).
+--
+-- Los bbox de ciudad son APROXIMADOS: hay que calibrarlos en juego
+-- (LastPurpose.debugCityAt imprime coords + ciudad detectada). El mapa
+-- vanilla de la region sirve como desbloqueo alternativo aunque el bbox
+-- no este afinado.
+
+LastPurpose.CITIES = {
+    LOUISVILLE  = { label = "LOUISVILLE",  bbox = { minX = 11400, maxX = 14600, minY = 300,   maxY = 4700  },
+                    maps = { "Base.LouisvilleMap1", "Base.LouisvilleMap2", "Base.LouisvilleMap3",
+                             "Base.LouisvilleMap4", "Base.LouisvilleMap5", "Base.LouisvilleMap6",
+                             "Base.LouisvilleMap7", "Base.LouisvilleMap8", "Base.LouisvilleMap9" } },
+    WEST_POINT  = { label = "WEST POINT",  bbox = { minX = 11100, maxX = 12500, minY = 6300,  maxY = 7600  },
+                    maps = { "Base.WestpointMap" } },
+    RIVERSIDE   = { label = "RIVERSIDE",   bbox = { minX = 5700,  maxX = 7000,  minY = 5100,  maxY = 6400  },
+                    maps = { "Base.RiversideMap" } },
+    ROSEWOOD    = { label = "ROSEWOOD",    bbox = { minX = 7600,  maxX = 8900,  minY = 10400, maxY = 11800 },
+                    maps = { "Base.RosewoodMap" } },
+    MARCH_RIDGE = { label = "MARCH RIDGE", bbox = { minX = 9700,  maxX = 11100, minY = 12600, maxY = 13800 },
+                    maps = { "Base.MarchRidgeMap" } },
+    MULDRAUGH   = { label = "MULDRAUGH",   bbox = { minX = 10200, maxX = 11400, minY = 8600,  maxY = 11200 },
+                    maps = { "Base.MuldraughMap" } },
+}
+
+-- Catalogo del hub. Entradas con implemented=false salen como "proximamente":
+-- se pueden desbloquear y ver el motivo, pero no seleccionarse todavia.
+-- Objetivo ~19 para el Ladron; esto es la semilla.
+LastPurpose.CATALOG = {
+    -- Louisville: cadena de 3.
+    { id = "louisville_knox_bank", city = "LOUISVILLE", order = 1,
+      name = "El ultimo golpe", short = "Knox Bank, Louisville",
+      unlock = { type = "start" }, implemented = true },
+    { id = "louisville_last_exhibition", city = "LOUISVILLE", order = 2,
+      name = "La ultima exposicion", short = "Galeria del norte, Louisville",
+      unlock = { type = "completePrev" }, implemented = false },
+    { id = "louisville_penthouse", city = "LOUISVILLE", order = 3,
+      name = "El cielo tiene dueno", short = "Penthouse, Louisville",
+      unlock = { type = "completePrev" }, implemented = false },
+
+    -- Otras ciudades: gated por conocer la ciudad. Contenido en el punto 3.
+    { id = "westpoint_payroll", city = "WEST_POINT", order = 1,
+      name = "La nomina desaparecida", short = "Banco de West Point",
+      unlock = { type = "cityKnown" }, implemented = false },
+    { id = "westpoint_unit27", city = "WEST_POINT", order = 2,
+      name = "Unidad 27", short = "Trastero privado, West Point",
+      unlock = { type = "completePrev" }, implemented = false },
+    { id = "riverside_frozen", city = "RIVERSIDE", order = 1,
+      name = "Cuenta congelada", short = "Banco de Riverside",
+      unlock = { type = "cityKnown" }, implemented = false },
+    { id = "riverside_founder", city = "RIVERSIDE", order = 2,
+      name = "El trofeo del fundador", short = "Country Club, Riverside",
+      unlock = { type = "completePrev" }, implemented = false },
+    { id = "rosewood_file93", city = "ROSEWOOD", order = 1,
+      name = "Expediente 93", short = "Juzgado de Rosewood",
+      unlock = { type = "cityKnown" }, implemented = false },
+    { id = "rosewood_chiefbox", city = "ROSEWOOD", order = 2,
+      name = "La caja del jefe", short = "Parque de bomberos, Rosewood",
+      unlock = { type = "completePrev" }, implemented = false },
+}
+
+-- Indices derivados (id -> entrada, ciudad -> lista ordenada).
+LastPurpose.CATALOG_BY_ID = {}
+LastPurpose.CATALOG_BY_CITY = {}
+for _, entry in ipairs(LastPurpose.CATALOG) do
+    LastPurpose.CATALOG_BY_ID[entry.id] = entry
+    local list = LastPurpose.CATALOG_BY_CITY[entry.city]
+    if not list then list = {}; LastPurpose.CATALOG_BY_CITY[entry.city] = list end
+    list[#list + 1] = entry
+end
+for _, list in pairs(LastPurpose.CATALOG_BY_CITY) do
+    table.sort(list, function(a, b) return (a.order or 0) < (b.order or 0) end)
+end
+
+function LastPurpose.cityOf(x, y)
+    for key, city in pairs(LastPurpose.CITIES) do
+        local b = city.bbox
+        if x >= b.minX and x <= b.maxX and y >= b.minY and y <= b.maxY then
+            return key
+        end
+    end
+    return nil
+end
+
+-- Imprime la ciudad detectada en la posicion del jugador. Para calibrar
+-- los bbox: caminar por cada pueblo y ver que salga la etiqueta correcta.
+function LastPurpose.debugCityAt(player)
+    player = player or (getSpecificPlayer and getSpecificPlayer(0))
+    if not player then return end
+    local x, y = math.floor(player:getX()), math.floor(player:getY())
+    local key = LastPurpose.cityOf(x, y)
+    print(string.format("[LastPurpose] pos %d,%d -> ciudad: %s", x, y, tostring(key)))
+end
+
+--- ¿El jugador conoce la ciudad `cityKey`? True si la visito
+--- (data.citiesVisited) o lleva su mapa vanilla en el inventario.
+function LastPurpose.isCityKnown(data, player, cityKey)
+    if not cityKey then return false end
+    if data and data.citiesVisited and data.citiesVisited[cityKey] then return true end
+    local city = LastPurpose.CITIES[cityKey]
+    if not city or not player or not player.getInventory then return false end
+    local inv = player:getInventory()
+    for _, mapType in ipairs(city.maps or {}) do
+        local ok, has = pcall(function() return inv:contains(mapType) or inv:containsTypeRecurse(mapType) end)
+        if ok and has then return true end
+    end
+    return false
+end
+
+--- Estado calculado de un golpe del catalogo.
+--- @return "done" | "active" | "available" | "locked", motivo (string|nil)
+function LastPurpose.heistStatus(id, data, player)
+    local entry = LastPurpose.CATALOG_BY_ID[tostring(id or "")]
+    if not entry then return "locked", "Desconocido" end
+    data = data or {}
+
+    if data.completedHeists and data.completedHeists[entry.id] then
+        return "done", nil
+    end
+    if data.activeHeistId == entry.id then
+        return "active", nil
+    end
+
+    local u = entry.unlock or { type = "locked" }
+    if u.type == "start" then
+        return "available", nil
+    elseif u.type == "completePrev" then
+        local list = LastPurpose.CATALOG_BY_CITY[entry.city] or {}
+        local prev
+        for _, e in ipairs(list) do
+            if (e.order or 0) < (entry.order or 0) then prev = e end
+        end
+        if not prev then return "available", nil end
+        if data.completedHeists and data.completedHeists[prev.id] then
+            return "available", nil
+        end
+        return "locked", "Completa antes \"" .. tostring(prev.name) .. "\"."
+    elseif u.type == "cityKnown" then
+        if LastPurpose.isCityKnown(data, player, entry.city) then
+            return "available", nil
+        end
+        local label = (LastPurpose.CITIES[entry.city] or {}).label or entry.city
+        return "locked", "Explora " .. tostring(label) .. " o consigue su mapa."
+    elseif u.type == "profession" then
+        -- Placeholder: el chequeo real (prologo + Nv. skill) se cablea con KeyasReq.
+        return "locked", "Requiere avanzar en la profesion."
+    end
+    return "locked", "Bloqueada."
+end
+
 function LastPurpose.getHeist(id)
     return LastPurpose.HEISTS[tostring(id or "")]
 end
