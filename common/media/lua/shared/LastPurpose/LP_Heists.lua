@@ -188,25 +188,29 @@ LastPurpose.HEIST_ORDER = { "louisville_knox_bank" }
 -- El estado ("done"/"active"/"available"/"locked") se CALCULA, nunca se
 -- guarda (ver LastPurpose.heistStatus).
 --
--- Los bbox de ciudad son APROXIMADOS: hay que calibrarlos en juego
--- (LastPurpose.debugCityAt imprime coords + ciudad detectada). El mapa
--- vanilla de la region sirve como desbloqueo alternativo aunque el bbox
--- no este afinado.
+-- Los bbox de ciudad son AMPLIOS a proposito (rejilla de celdas de 300 tiles
+-- de la Knox Country base). No hace falta afinarlos caminando: el gate
+-- "cityKnown" solo decide si un golpe NO implementado se ve con nombre o
+-- censurado, y hay dos desbloqueos alternativos que no dependen del bbox:
+--   * llevar el mapa vanilla de la region (maps = {...}), y
+--   * empezar un golpe de esa ciudad (LP_Unlocks marca citiesVisited).
+-- Si algun dia un golpe de fuera de Louisville se implementa, se afina el
+-- bbox de esa unica ciudad con LastPurpose.debugCityAt(player).
 
 LastPurpose.CITIES = {
-    LOUISVILLE  = { label = "LOUISVILLE",  bbox = { minX = 11400, maxX = 14600, minY = 300,   maxY = 4700  },
+    LOUISVILLE  = { label = "LOUISVILLE",  bbox = { minX = 11100, maxX = 14700, minY = 150,   maxY = 4200  },
                     maps = { "Base.LouisvilleMap1", "Base.LouisvilleMap2", "Base.LouisvilleMap3",
                              "Base.LouisvilleMap4", "Base.LouisvilleMap5", "Base.LouisvilleMap6",
                              "Base.LouisvilleMap7", "Base.LouisvilleMap8", "Base.LouisvilleMap9" } },
-    WEST_POINT  = { label = "WEST POINT",  bbox = { minX = 11100, maxX = 12500, minY = 6300,  maxY = 7600  },
+    WEST_POINT  = { label = "WEST POINT",  bbox = { minX = 10950, maxX = 12650, minY = 6050,  maxY = 7750  },
                     maps = { "Base.WestpointMap" } },
-    RIVERSIDE   = { label = "RIVERSIDE",   bbox = { minX = 5700,  maxX = 7000,  minY = 5100,  maxY = 6400  },
+    RIVERSIDE   = { label = "RIVERSIDE",   bbox = { minX = 5550,  maxX = 6950,  minY = 4900,  maxY = 6200  },
                     maps = { "Base.RiversideMap" } },
-    ROSEWOOD    = { label = "ROSEWOOD",    bbox = { minX = 7600,  maxX = 8900,  minY = 10400, maxY = 11800 },
+    ROSEWOOD    = { label = "ROSEWOOD",    bbox = { minX = 7600,  maxX = 8900,  minY = 10350, maxY = 11800 },
                     maps = { "Base.RosewoodMap" } },
-    MARCH_RIDGE = { label = "MARCH RIDGE", bbox = { minX = 9700,  maxX = 11100, minY = 12600, maxY = 13800 },
+    MARCH_RIDGE = { label = "MARCH RIDGE", bbox = { minX = 9950,  maxX = 11050, minY = 12400, maxY = 13650 },
                     maps = { "Base.MarchRidgeMap" } },
-    MULDRAUGH   = { label = "MULDRAUGH",   bbox = { minX = 10200, maxX = 11400, minY = 8600,  maxY = 11200 },
+    MULDRAUGH   = { label = "MULDRAUGH",   bbox = { minX = 10350, maxX = 11650, minY = 8850,  maxY = 11050 },
                     maps = { "Base.MuldraughMap" } },
 }
 

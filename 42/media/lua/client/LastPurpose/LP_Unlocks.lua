@@ -50,5 +50,15 @@ function LastPurpose.updateHubUnlocks(player)
         elseif data.stage and data.stage ~= "inactive" then
             data.activeHeistId = sel
         end
+
+        -- Empezar un golpe implica estar en su ciudad: da igual lo fino que
+        -- este el bbox, si estas robando el banco de una ciudad ya la
+        -- "conoces". Esto abre la cadena de esa ciudad sin depender de la
+        -- calibracion de LastPurpose.CITIES.
+        local entry = LastPurpose.CATALOG_BY_ID and LastPurpose.CATALOG_BY_ID[sel]
+        if entry and entry.city then
+            data.citiesVisited = data.citiesVisited or {}
+            data.citiesVisited[entry.city] = true
+        end
     end
 end
