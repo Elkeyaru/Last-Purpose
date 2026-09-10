@@ -9,6 +9,20 @@ referencia histórica.
 
 (nada pendiente de publicar)
 
+## 1.3.2 — 2026-09-10
+
+Build de prueba para creadores. Arregla un requisito que faltaba en la fase
+de preparación.
+
+### Arreglado
+- **La mesa de planificación vuelve a ser un requisito visible de la
+  preparación.** «Mesa de planificación crafteada y colocada» estaba fuera
+  de `LastPurpose.OBJECTIVES` desde la reescritura 1.1.0 (el código que la
+  marca — `LP_SafehouseAnchor` — seguía ahí, pero ni se exigía para cerrar
+  la fase ni salía en el diario). Ahora aparece en la lista de objetivos y
+  la preparación no se completa sin ella. Se marca sola en cuanto el juego
+  detecta la mesa cerca del jugador, y se desmarca si la mesa desaparece.
+
 ## 1.3.1 — 2026-09-10
 
 Build de prueba para creadores de contenido. Sin cambios de contenido ni de
