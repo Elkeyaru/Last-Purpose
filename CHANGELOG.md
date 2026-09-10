@@ -7,6 +7,16 @@ referencia histórica.
 
 ## Sin publicar
 
+### Arreglado
+- **La mesa de planificación vuelve a ser un requisito visible de la
+  preparación** (`key = "safehouse"` en `LastPurpose.OBJECTIVES`). Estaba
+  fuera de la lista desde la reescritura 1.1.0; el código que la marca
+  (`LP_SafehouseAnchor`) seguía ahí pero ni se exigía para cerrar la fase
+  ni salía en el diario. Publicado también como 1.3.2.
+- **El registro de consola (`LastPurpose.DEBUG`) y su casilla arrancan
+  activados** mientras el mod está en pruebas. Solo consola: sin
+  fast-activation, sin revelar la frecuencia.
+
 ### Hito 2 del hub — desbloqueo de golpes
 
 - **`LP_Heists` — catálogo real del hub** (`LastPurpose.CATALOG`, 9 entradas

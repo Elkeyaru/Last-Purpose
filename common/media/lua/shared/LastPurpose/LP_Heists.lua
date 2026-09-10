@@ -36,7 +36,13 @@ LastPurpose.ACTIVATION_DAYS = LastPurpose.DEBUG_FAST_ACTIVATION
     and (LastPurpose.ACTIVATION_MINUTES / (24 * 60))
     or 15
 
+-- Requisitos de la fase de preparacion. "safehouse" = mesa de planificacion
+-- crafteada y colocada en el refugio: LP_SafehouseAnchor pone
+-- data.objectives.safehouse = true cuando detecta la mesa cerca del jugador
+-- (y la vuelve a false si desaparece). Se habia perdido de esta lista en la
+-- reescritura 1.1.0 aunque el codigo que la marca seguia ahi.
 LastPurpose.OBJECTIVES = {
+    { key = "safehouse",   label = "Mesa de planificacion crafteada y colocada" },
     { key = "crowbar",     label = "Palanca" },
     { key = "screwdriver", label = "Destornillador" },
     { key = "flashlight",  label = "Linterna" },
