@@ -7,6 +7,15 @@ referencia histórica.
 
 ## Sin publicar
 
+(nada pendiente de publicar)
+
+## 1.3.0 — 2026-09-09
+
+Reescritura de la GUI del ordenador sobre **KeyasCSS** y migración de los
+sistemas propios a **KeyasLib**. `versionMin` se mantiene en 42.20.4.
+Requiere **KeyasLib >= 1.2.5**. No rompe partidas de 1.2.0, pero el sello
+del banco y la escena de la nota cambiaron internamente.
+
 ### Cambiado
 - **`LP_Computer` — el contenido de la GUI ahora lo maqueta y pinta
   KeyasCSS** (KeyasLib >= 1.2.2), no primitivas a mano. El *chrome* fijo
@@ -27,12 +36,32 @@ referencia histórica.
   cierra la **X** o **ESC**. El clic dentro se consume (no llega al mundo).
 - Barra de título dinámica por app (Notas/Archivos/Sistema repintan el
   título horneado).
-- Tipografía: 4 atlas de glifos nuevos (Bahnschrift ui14/ui18/ui30,
-  Consolas mono16) vía `tools/bake_fonts.ps1`, reemplazan al atlas VT323
-  único. `docs/GUI_ASSETS.md` especifica el chrome + iconos.
-- Assets nuevos de ChatGPT: `xcyos_chrome.png` rehecho, `lp_icon_00..16`,
-  `lp_prof_{ladron,medico,ingeniero,veterano}`.
-- **Sin probar del todo en juego.**
+- Tipografía: atlas de glifos **VT323** (la fuente del mockup, `tools/bake_fonts.ps1`
+  la hornea desde el `.ttf` del repo) a 4 tamaños — un solo peso, jerarquía
+  por tamaño. Reemplaza al atlas VT323 de dos tamaños anterior.
+- El rail y el título los dibuja el código (el `xcyos_chrome.png` nuevo los
+  trae en blanco). Dock de profesión en el panel de lista (solo lectura).
+  Notas/Archivos/Sistema con contenido real; Sistema sin configuración
+  (las opciones siguen en Opciones → Mods).
+- El árbol KeyasCSS se cachea: solo se reconstruye al cambiar de
+  app/misión/profesión, no cada frame (quita el lag al clicar).
+- Assets nuevos: `xcyos_chrome.png` rehecho, `lp_icon_00..16`,
+  `lp_prof_{ladron,medico,ingeniero,veterano}`. `docs/GUI_ASSETS.md`
+  especifica el chrome + iconos.
+- **`KeyasZones.getEntries`**: `LP_BankSecurity` reutiliza la lista de
+  entradas de KeyasZones para su cerrojo en vez de barrer el perímetro por
+  su cuenta — un escaneo por minuto cerca del banco en vez de dos.
+- **Bolsa del botín**: gris (`IconsForTexture = DuffelBag_Grey` + `model`
+  propio con textura, porque el `DuffelBag_Ground` vanilla no trae textura).
+  Se quitó el tinte por código, que dejaba icono/modelo en negro.
+- **Escena de la nota**: 2 cadáveres con la nota dentro de uno (hay que
+  saquearlo), ≥3 zombis custodiando, y nunca bajo un vehículo
+  (`findClueSquare` busca casilla con suelo). Confirmar la lectura ahora
+  exige la nota en el inventario + un rato leyéndola (~10 s), no depende
+  solo de `getAlreadyReadPages`.
+- El walkie militar del botín es ahora `LastPurpose.BandWalkieTalkie`
+  («Walkie Takie de la banda»), sintonizado a su frecuencia; guardará las
+  de otros golpes al descubrir sus mapas.
 
 ### Añadido
 - **Interacción con la tecla E:** junto a la mesa, `E` abre la GUI (como
@@ -64,11 +93,14 @@ referencia histórica.
   **Verificar en juego que KeyasZones detecta las puertas/ventanas del
   banco** (`KeyasLib.DEBUG = true` y mirar el conteo).
 
-### Pendiente
+### Pendiente (hito 2 del hub)
+- Lógica de desbloqueo real: Louisville en cadena (completar uno abre el
+  siguiente, 3 en total); otras ciudades gated por «haber estado allí» o
+  tener el mapa vanilla de la región; líneas de profesión por prólogo +
+  Nv. 2 de habilidad. Objetivo ~19 golpes para el Ladrón. El catálogo del
+  ordenador pasará a `status` calculado, no hardcodeado.
 - Scroll en la lista de misiones si algún día no cabe (KeyasCSS aún no
-  tiene scroll; a pantalla completa entran las 4 ciudades).
-  Se dejó para después de probar KeyasLib en juego con un consumidor real:
-  el sellado del banco de 1.2.0 está validado y no se toca hasta entonces.
+  tiene scroll).
 
 ## 1.2.0 — 2026-09-08
 

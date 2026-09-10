@@ -1,5 +1,5 @@
 LAST PURPOSE — DOCUMENTACIÓN MAESTRA DEL PROYECTO
-Estado del código: estable (v1.2.0). "El último golpe" validado en partida hasta 1.1.0; el hub del ordenador (1.2.0) es solo lectura y no altera ese flujo.
+Estado del código: estable (v1.3.0). "El último golpe" validado en partida hasta 1.1.0; el hub del ordenador (1.2.0) y su reescritura sobre KeyasCSS (1.3.0) son solo lectura y no alteran ese flujo. Requiere KeyasLib >= 1.2.5.
 Juego: Project Zomboid Build 42 (versionMin 42.20.4)
 Modo compatible actual: Singleplayer
 Autor original: ElKeyaru
@@ -244,7 +244,7 @@ definitivas.
 11. ESTADO DE PUBLICACIÓN
 ======================================================================
 
-La versión estable actual es 1.2.0. Incluye la reescritura completa de la
+La versión estable actual es 1.3.0. Incluye la reescritura completa de la
 lógica (1.0.0), el hotfix de orden de carga (1.0.1), el rediseño de interfaz
 en libro (1.1.0), y en 1.2.0: sellado del banco reforzado, panel de opciones,
 receta de la mesa con chatarra electrónica, y el hito 1 del hub del ordenador

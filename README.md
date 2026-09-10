@@ -11,10 +11,10 @@ El prototipo actual es la historia del Ladrón, **"El último golpe"**
 
 ## Versión actual
 
-**1.2.0 (estable)** — Singleplayer, Project Zomboid Build 42, `versionMin`
-42.20.4. "El último golpe" jugado de principio a fin sin errores atribuibles
-al mod hasta 1.1.0; el hub del ordenador que suma 1.2.0 es de solo lectura y
-no altera ese flujo.
+**1.3.0 (estable)** — Singleplayer, Project Zomboid Build 42, `versionMin`
+42.20.4. Requiere KeyasLib >= 1.2.5. "El último golpe" jugado de principio a
+fin; la GUI del ordenador se reescribió sobre KeyasCSS y los sistemas propios
+(opciones, sellado del banco) migraron a KeyasLib.
 
 Ver `CHANGELOG.md` para el detalle versión por versión y
 `documentacion_mod.txt` para la referencia técnica y de diseño completa.
