@@ -1,5 +1,5 @@
 LAST PURPOSE — DOCUMENTACIÓN MAESTRA DEL PROYECTO
-Estado del código: estable (v1.3.0). "El último golpe" validado en partida hasta 1.1.0; el hub del ordenador (1.2.0) y su reescritura sobre KeyasCSS (1.3.0) son solo lectura y no alteran ese flujo. Requiere KeyasLib >= 1.2.5.
+Estado del código: build de prueba para creadores (v1.3.2). "El último golpe" validado en partida hasta 1.1.0; el hub del ordenador (1.2.0) y su reescritura sobre KeyasCSS (1.3.0) no alteran ese flujo. El Hito 2 del hub (selección de golpe, desbloqueo por cadena/ciudad/profesión) está cableado pero sin probar en partida. Requiere KeyasLib >= 1.2.5.
 Juego: Project Zomboid Build 42 (versionMin 42.20.4)
 Modo compatible actual: Singleplayer
 Autor original: ElKeyaru
@@ -225,12 +225,16 @@ orden de prioridad:
 2. Convertir la mesa de planificación en una mesa con ordenador: al
    interactuar, abre una GUI de pantalla completa que funciona como hub de
    misiones para TODAS las profesiones (no solo Ladrón), con requisitos de
-   desbloqueo configurables por misión. Pendiente de definir: qué tipo de
-   requisito (días sobrevividos, profesión, misión previa completada, ítem
-   específico).
-3. Agregar 4 golpes nuevos en Louisville (banco ya existe; posibles
-   candidatos: galería de arte, concesionario de autos, ático/penthouse),
-   ya integrados al hub en vez de sueltos.
+   desbloqueo configurables por misión. HECHO (hitos 1 y 2, sin validar en
+   partida el 2). Modelo de desbloqueo: Louisville es una cadena (completar
+   uno abre el siguiente); las otras ciudades se abren al haber estado allí
+   o tener su mapa vanilla; las líneas de profesión, al completar el prólogo
+   del Ladrón + Nv. 2 de su habilidad. Un solo golpe activo a la vez.
+3. Agregar golpes nuevos en Louisville — la cadena es de 3 en total (Knox +
+   2): `louisville_last_exhibition` (galería) y `louisville_penthouse`
+   (ático), ya en el catálogo con `implemented = false`. Falta su diseño de
+   misión, contenido y coordenadas. Objetivo ~19 golpes para el Ladrón entre
+   todas las ciudades.
 4. Historias de otras profesiones (Leñador, Veterano, Mecánico, Médico,
    Desempleado), reutilizando el hub del punto 2.
 
@@ -244,13 +248,19 @@ definitivas.
 11. ESTADO DE PUBLICACIÓN
 ======================================================================
 
-La versión estable actual es 1.3.0. Incluye la reescritura completa de la
-lógica (1.0.0), el hotfix de orden de carga (1.0.1), el rediseño de interfaz
-en libro (1.1.0), y en 1.2.0: sellado del banco reforzado, panel de opciones,
-receta de la mesa con chatarra electrónica, y el hito 1 del hub del ordenador
-(GUI de terminal retro de solo lectura, con fuente propia por atlas de
-glifos). El flujo de "El último golpe" está validado en partida hasta 1.1.0;
-lo de 1.2.0 no lo altera. versionMin sube a 42.20.4.
+Todavía no está en la Steam Workshop: la idea (hub de misiones narrativas de
+atraco para el late game) no se ha visto hecha así en PZ y se prefiere
+pulirla y darle recorrido con creadores de confianza antes de exponerla.
+
+Las releases en GitHub se cortan en ramas `release/1.3.x` desde el tag
+anterior (no desde `main`, que lleva trabajo en curso). La última publicada
+es la **1.3.2**, una build de prueba para creadores: idéntica a la 1.3.0
+salvo que el registro de consola viene activado por defecto (1.3.1) y que la
+mesa de planificación vuelve a ser un requisito visible de la preparación
+(1.3.2). Contenido y lógica de "El último golpe" sin cambios; validado en
+partida hasta 1.1.0, y 1.2.0/1.3.x no lo alteran. El Hito 2 del hub está en
+`main` pero sin publicar ni validar en partida. KeyasLib >= 1.2.5.
+versionMin 42.20.4.
 
 Last Purpose es un mod no oficial de Project Zomboid. Project Zomboid y sus
 recursos pertenecen a The Indie Stone.
@@ -308,8 +318,12 @@ crea/normaliza `player:getModData().LastPurpose` con esquema=1.
 
 Activa `prep_started` al alcanzar `ACTIVATION_DAYS`. Escanea el inventario
 (recursivo, sin ciclos) buscando los tipos de `LastPurpose.TOOL_TYPES` y
-verifica el vehículo ocupado. Pasa a `prep_completed` cuando los cinco
-requisitos de `LastPurpose.OBJECTIVES` están satisfechos.
+verifica el vehículo ocupado. Pasa a `prep_completed` cuando los seis
+requisitos de `LastPurpose.OBJECTIVES` están satisfechos: palanca,
+destornillador, linterna, bolsa, vehículo con combustible y la mesa de
+planificación crafteada y colocada (`objectives.safehouse`, que marca
+`LP_SafehouseAnchor`). El requisito de la mesa se había perdido de la lista
+en la reescritura 1.1.0 y volvió en la 1.3.2.
 
 12.5 LP_RadioStory.lua / LP_RadioChannel.lua (servidor)
 
@@ -390,20 +404,48 @@ interferir con el arrastre de la cabecera.
 
 12.12 LP_Computer.lua
 
-Hito 1 del hub del ordenador (roadmap punto 2). La mesa de planificación es
+Hub del ordenador (roadmap punto 2), hitos 1 y 2. La mesa de planificación es
 ahora «la mesa con ordenador»: mismo mueble, misma pieza, pero la receta pide
 chatarra electrónica en vez de libro + periódicos, y el menú contextual
-(`fillPlanningTableWorldMenu` en `LP_SafehouseAnchor.lua`) abre `LPComputer`,
-un `ISPanel` de pantalla completa estilo terminal. Es de SOLO LECTURA: dibuja
-el catálogo por ciudad (`CATALOG` local; solo `louisville_knox_bank` está
-desbloqueado, el resto sale como `?????????`) y un panel de detalle. Su único
-botón funcional, en la etapa `review_loot`, llama a
-`LastPurpose.reviewHeistLoot()` — no reescribe nada de ese flujo. La opción
-directa «Revisar el botín» del menú se mantiene en paralelo mientras se
-valida el botón en juego. La selección de misión y los desbloqueos por
-ciudad/profesión son hitos 2-5, todavía sin implementar.
+(`fillPlanningTableWorldMenu` en `LP_SafehouseAnchor.lua`) — o la tecla E
+junto a la mesa — abre `LPComputer`, un `ISPanel` de pantalla completa estilo
+terminal. El contenido lo maqueta y pinta KeyasCSS (ver `CONTENT_CSS` +
+`contentTree`).
 
-12.13 LP_Main.lua
+Hito 1: chrome, tipografía (atlas VT323 vía `KeyasUI`), apps
+Misiones/Notas/Archivos/Sistema, entrega del botín en `review_loot`
+(`LastPurpose.reviewHeistLoot`).
+
+Hito 2 (cableado, sin validar en partida): la lista de misiones sale del
+catálogo real `LastPurpose.CATALOG` (definido en `LP_Heists.lua`), agrupada
+por ciudad en el orden de `CITY_ORDER`. Cada fila muestra el estado que
+calcula `LastPurpose.heistStatus(id, data, player)` —
+`done`/`active`/`available`/`locked`— con su punto de color; los golpes
+`locked` salen como `?????????` con el motivo real como pista. El detalle
+tiene un CTA según estado: `available`+`implemented` → «Seleccionar este
+golpe» (`LPComputer:onSelectHeist`, que fija `data.selectedHeist` /
+`data.activeHeistId`; bloqueado si ya hay un golpe en curso);
+`available` sin implementar → «Próximamente»; `active` → el flujo de entrega
+de siempre; `done` → «Archivada». El dial de profesiones deriva de
+`LastPurpose.PROFESSION_LINES` y su estado abierto/bloqueado lo da
+`LastPurpose.professionLineStatus` (prólogo del Ladrón + Nv. 2 de la
+habilidad de la línea); la lista/detalle se filtran a los golpes de la línea
+seleccionada. El estado que alimenta todo esto lo mantiene `LP_Unlocks.lua`
+(`data.citiesVisited`, `data.completedHeists`, `data.activeHeistId`) una vez
+por minuto. `KeyasReq` provee `skillAtLeast` para el chequeo de habilidad.
+
+12.13 LP_Unlocks.lua
+
+Cliente. Una función, `LastPurpose.updateHubUnlocks(player)`, en el tick de
+un minuto. Mantiene el estado que lee `LastPurpose.heistStatus`:
+`data.citiesVisited[<CIUDAD>]` (se marca al entrar al bbox de una ciudad de
+`LastPurpose.CITIES`, o al empezar un golpe de esa ciudad — así el bbox no
+necesita calibración fina), `data.completedHeists[<id>]` (se marca al llegar
+`data.stage` a `completed`; `reviewHeistLoot` lo marca también) y
+`data.activeHeistId`. Un solo golpe activo a la vez porque solo hay una
+máquina de etapas (`data.stage`).
+
+12.14 LP_Main.lua
 
 Requiere `LP_Heists` una sola vez y todos los archivos de cliente. Registra
 los eventos descritos en la sección 8. `LastPurpose.eventsRegistered` evita
@@ -429,3 +471,17 @@ un doble registro si el archivo se volviera a ejecutar.
                 "Usar el ordenador" abre una GUI de terminal retro de solo
                 lectura, con fuente propia (atlas de glifos VT323).
                 versionMin -> 42.20.4.
+1.3.0           GUI del hub reescrita sobre KeyasCSS (pantalla completa,
+                cierra solo con X/ESC, tecla E junto a la mesa). Migración a
+                KeyasLib: opciones -> KeyasOptions, sellado del banco ->
+                KeyasZones (parcial). Escena de la nota (2 cadáveres, nota
+                dentro de uno, >=3 guardias, nunca bajo un vehículo). Bolsa
+                del botín en gris. Walkie de la banda. Requiere KeyasLib
+                >= 1.2.5.
+1.3.1           Build de prueba para creadores: el registro de consola viene
+                activado por defecto (solo eso).
+1.3.2           Build de prueba para creadores: la mesa de planificación
+                vuelve a ser requisito visible de la preparación.
+Sin publicar    Hito 2 del hub cableado (sin validar en partida):
+                LastPurpose.CATALOG + heistStatus + LP_Unlocks + líneas de
+                profesión. Ver CHANGELOG.md.
