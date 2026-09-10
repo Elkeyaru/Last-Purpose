@@ -284,7 +284,7 @@ a mesas nuevas).
 
 ## 0.1.4 – 0.7.2 — 2026-09-02 a 2026-09-06
 
-Desarrollo original por ElKeyaru con asistencia de ChatGPT. Estableció la
+Desarrollo original por ElKeyaru. Estableció la
 narrativa completa de "El último golpe": preparación, radio, investigación
 con 21 puntos de reunión, reconocimiento del Knox Bank, seguridad diurna del
 perímetro, robo, emboscada de escape y recompensa en el refugio. Ver el
