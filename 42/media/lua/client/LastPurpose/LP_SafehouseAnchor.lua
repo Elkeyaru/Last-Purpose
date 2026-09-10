@@ -170,6 +170,11 @@ local function addCompletionSupplies(lootBag, data, lootTable)
         if not give("ammo:" .. index, data.completionAmmoTypes[index], 1) then return false end
     end
 
+    -- Trofeo coleccionable del golpe (uno por golpe, via la misma clave
+    -- idempotente de give()).
+    local trophy = LastPurpose.HEIST_TROPHIES and LastPurpose.HEIST_TROPHIES[data.selectedHeist or ""]
+    if trophy and not give("trophy:" .. trophy, trophy, 1) then return false end
+
     data.completionSuppliesGranted = true
     return true
 end

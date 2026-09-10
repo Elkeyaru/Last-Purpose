@@ -7,6 +7,20 @@ referencia histórica.
 
 ## Sin publicar
 
+### Añadido
+- **Trofeos coleccionables por golpe.** Cada golpe de Louisville deja un
+  recuerdo único al archivarse, para exhibir en el refugio (categoría
+  `Memento`, sin función): `LastPurpose.TrophyKnoxIngot` (lingote grabado —
+  modelo `GoldBar` vanilla), `LastPurpose.TrophyCrimsonLady` («La dama de
+  carmesí», marco dorado — modelo propio con textura bañada en oro) y
+  `LastPurpose.TrophyPenthouseGoblet` (copa de oro — modelo `Goblet_Gold`
+  vanilla). Definidos en `common/media/scripts/LastPurpose_Trophies.txt`;
+  el mapa golpe→trofeo es `LastPurpose.HEIST_TROPHIES`; los entrega
+  `addCompletionSupplies` con la misma clave idempotente que el resto de la
+  recompensa. Los dos golpes aún sin implementar ya tienen su trofeo listo.
+  `tools/recolor_gold.ps1` regenera la textura dorada del marco desde el
+  install de PZ.
+
 ### Arreglado
 - **La mesa de planificación vuelve a ser un requisito visible de la
   preparación** (`key = "safehouse"` en `LastPurpose.OBJECTIVES`). Estaba

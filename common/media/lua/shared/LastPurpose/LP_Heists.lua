@@ -187,6 +187,16 @@ LastPurpose.HEISTS = {
 
 LastPurpose.HEIST_ORDER = { "louisville_knox_bank" }
 
+-- Trofeo coleccionable que deja cada golpe al archivarse (un recuerdo unico
+-- por golpe; ver common/media/scripts/LastPurpose_Trophies.txt). Lo entrega
+-- addCompletionSupplies en LP_SafehouseAnchor.lua, idempotente. Los golpes
+-- todavia sin implementar ya tienen su trofeo listo aqui.
+LastPurpose.HEIST_TROPHIES = {
+    louisville_knox_bank       = "LastPurpose.TrophyKnoxIngot",
+    louisville_last_exhibition = "LastPurpose.TrophyCrimsonLady",
+    louisville_penthouse       = "LastPurpose.TrophyPenthouseGoblet",
+}
+
 -- ===== Hito 2: ciudades y catalogo de desbloqueo =====
 --
 -- Cada golpe pertenece a una CITY y tiene un ORDER dentro de esa ciudad

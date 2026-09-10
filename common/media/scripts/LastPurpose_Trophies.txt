@@ -1,0 +1,63 @@
+module LastPurpose
+{
+    /* Trofeos coleccionables: un recuerdo unico por golpe de Louisville.
+       Sin funcion -- solo para exhibir en el refugio. Cada uno reusa icono
+       vanilla (los de WorldItems/ son mapas UV, no sirven de icono) y, para
+       el modelo del mundo, o un modelo vanilla ya dorado o uno propio con
+       textura banada en oro por tools/recolor_gold.ps1.
+
+       El golpe entrega su trofeo al archivarse (ver
+       LastPurpose.HEIST_TROPHIES en LP_Heists.lua y addCompletionSupplies
+       en LP_SafehouseAnchor.lua). Idempotente. */
+
+    /* Knox Bank -- "El ultimo golpe". Lingote grabado. Modelo vanilla
+       (GoldBar ya es dorado). */
+    item TrophyKnoxIngot
+    {
+        DisplayCategory = Memento,
+        ItemType = base:normal,
+        Weight = 1.0,
+        Icon = Ingot_Gold,
+        StaticModel = GoldBar,
+        WorldStaticModel = GoldBar,
+        Tooltip = Tooltip_LastPurpose_TrophyKnoxIngot,
+        Tags = base:ismemento,
+    }
+
+    /* La ultima exposicion -- galeria. El lienzo recuperado en su marco;
+       el marco va dorado (modelo propio LP_TrophyCrimsonLady). */
+    item TrophyCrimsonLady
+    {
+        DisplayCategory = Memento,
+        ItemType = base:normal,
+        Weight = 1.0,
+        Icon = Frame,
+        WorldStaticModel = LP_TrophyCrimsonLady,
+        Tooltip = Tooltip_LastPurpose_TrophyCrimsonLady,
+        Tags = base:ismemento,
+    }
+
+    /* El cielo tiene dueno -- penthouse. La copa de oro del empresario.
+       Modelo vanilla Goblet_Gold. */
+    item TrophyPenthouseGoblet
+    {
+        DisplayCategory = Memento,
+        ItemType = base:normal,
+        Weight = 0.5,
+        Icon = Goblet_Metal,
+        StaticModel = Goblet_Gold,
+        WorldStaticModel = Goblet_Gold,
+        Tooltip = Tooltip_LastPurpose_TrophyPenthouseGoblet,
+        Tags = base:ismemento,
+    }
+}
+
+/* Marco dorado para TrophyCrimsonLady. Misma malla que el Frame vanilla,
+   textura banada en oro (tools/recolor_gold.ps1 la genera desde
+   WorldItems/Frame.png del install de PZ). */
+model LP_TrophyCrimsonLady
+{
+    mesh = WorldItems/Frame,
+    texture = LastPurpose/LP_TrophyCrimsonLady,
+    scale = 0.4,
+}
