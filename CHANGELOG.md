@@ -9,6 +9,18 @@ referencia histórica.
 
 (nada pendiente de publicar)
 
+## 1.3.1 — 2026-09-10
+
+Build de prueba para creadores de contenido. Sin cambios de contenido ni de
+lógica frente a la 1.3.0.
+
+### Cambiado
+- **El registro de depuración (consola) viene activado por defecto** para
+  que el `console.txt` sea útil en los reportes de bugs. Solo eso: la
+  activación del golpe sigue tardando sus 15 días reales y la frecuencia de
+  radio no se revela. La casilla «Registro de depuración» en
+  Opciones → Mods lo apaga.
+
 ## 1.3.0 — 2026-09-09
 
 Reescritura de la GUI del ordenador sobre **KeyasCSS** y migración de los

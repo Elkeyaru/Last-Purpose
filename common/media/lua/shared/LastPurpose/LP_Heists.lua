@@ -19,11 +19,16 @@ LastPurpose = LastPurpose or {}
 
 -- ===== Config =====
 
-LastPurpose.DEBUG = false
+-- Build de prueba para creadores de contenido: SOLO el registro de consola
+-- viene activado (para que el console.txt sirva en los reportes). La
+-- activacion sigue tardando sus 15 dias reales y la frecuencia de radio no
+-- se revela. La casilla "Registro de depuracion" (Opciones -> Mods) lo
+-- puede apagar.
+LastPurpose.DEBUG = true
 LastPurpose.DEBUG_FAST_ACTIVATION = false
 LastPurpose.DEBUG_SHOW_EXACT_FREQUENCY = false
 
-LastPurpose.VERSION = "1.3.0"
+LastPurpose.VERSION = "1.3.1"
 LastPurpose.SAVE_KEY = "LastPurpose"
 LastPurpose.SCHEMA = 1
 
