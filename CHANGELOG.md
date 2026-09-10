@@ -287,6 +287,4 @@ a mesas nuevas).
 Desarrollo original por ElKeyaru. Estableció la
 narrativa completa de "El último golpe": preparación, radio, investigación
 con 21 puntos de reunión, reconocimiento del Knox Bank, seguridad diurna del
-perímetro, robo, emboscada de escape y recompensa en el refugio. Ver el
-`documentacion_mod.txt` de esa etapa (recuperable en el historial de git) para
-el detalle version por versión.
+perímetro, robo, emboscada de escape y recompensa en el refugio.
