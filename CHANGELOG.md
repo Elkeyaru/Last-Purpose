@@ -19,8 +19,22 @@ referencia histórica.
 - **`LastPurpose.heistStatus(id, data, player)`** calcula
   `done` / `active` / `available` / `locked` (+ motivo). Louisville es una
   cadena de 3: completar uno abre el siguiente. Las otras ciudades se abren
-  al **haber estado en la ciudad** (`data.citiesVisited`) o **llevar su mapa
-  vanilla** en el inventario.
+  al **haber estado en la ciudad** (`data.citiesVisited`), **llevar su mapa
+  vanilla** en el inventario, o **empezar un golpe de esa ciudad**. Los
+  `bbox` de `LastPurpose.CITIES` son rectángulos amplios sobre la rejilla de
+  celdas: no hace falta calibrarlos caminando.
+- **Líneas de profesión cableadas.** `LastPurpose.PROFESSION_LINES` (Ladrón
+  siempre abierta; Médico/Ingeniero/Veterano) + `LastPurpose.prologueDone`,
+  `LastPurpose.checkSkill` (usa `KeyasReq.skillAtLeast` si está cargado) y
+  `LastPurpose.professionLineStatus(lineId, data, player)` → `open` /
+  `locked` (+ motivo). Una línea de profesión se abre al **completar el
+  prólogo del Ladrón** (`louisville_knox_bank`) **y** tener **Nv. 2** en su
+  habilidad (Medicina / Fabricación / Puntería). El `unlock` de un golpe de
+  profesión es `{ type = "profession", line = "medico" }`; sus golpes 2+ de
+  la línea usan `completePrev`. El dial de profesiones de `LP_Computer`
+  ahora refleja el estado real y su motivo, y filtra la lista/detalle a los
+  golpes de la línea seleccionada (líneas sin golpes escritos → aviso de
+  «próximamente»).
 - **`LP_Unlocks.lua`** (cliente, una vez por minuto): marca
   `data.citiesVisited[<CIUDAD>]` al entrar al bbox y mantiene
   `data.completedHeists` / `data.activeHeistId`. Un solo golpe activo a la
@@ -119,13 +133,12 @@ del banco y la escena de la nota cambiaron internamente.
   banco** (`KeyasLib.DEBUG = true` y mirar el conteo).
 
 ### Pendiente (hito 2 del hub)
-- Calibrar los `bbox` de `LastPurpose.CITIES` caminando cada pueblo en
-  partida (`LastPurpose.debugCityAt`).
-- Cablear el requisito real de las líneas de profesión (`unlock` de tipo
-  `profession`: prólogo + Nv. 2 de habilidad) — hoy es un *placeholder*
-  bloqueado.
-- Implementar los golpes `implemented=false` del catálogo (contenido en
-  `narrative-drafts/`).
+- Afinar el `bbox` de una ciudad concreta solo cuando se implemente un golpe
+  suyo (`LastPurpose.debugCityAt`); de momento no hace falta.
+- Confirmar en juego que los nombres de perk de `PROFESSION_LINES`
+  (`Doctor` / `MetalWelding` / `Aiming`) son los correctos en B42.
+- Implementar los golpes `implemented=false` del catálogo y los de las
+  líneas de profesión (contenido en `narrative-drafts/`).
 - Scroll en la lista de misiones si algún día no cabe (KeyasCSS aún no
   tiene scroll).
 

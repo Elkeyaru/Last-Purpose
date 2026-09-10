@@ -184,7 +184,9 @@ LastPurpose.HEIST_ORDER = { "louisville_knox_bank" }
 --   { type = "start" }                       -- disponible desde el principio
 --   { type = "completePrev" }                -- al completar el golpe anterior de su ciudad
 --   { type = "cityKnown" }                   -- al haber estado en la ciudad O tener su mapa
---   { type = "profession", skill=, level=, prologue=true }
+--   { type = "profession", line = "medico" } -- al abrirse esa linea de profesion
+--                                               (ver LastPurpose.PROFESSION_LINES);
+--                                               los golpes 2+ de la linea usan completePrev
 -- El estado ("done"/"active"/"available"/"locked") se CALCULA, nunca se
 -- guarda (ver LastPurpose.heistStatus).
 --
@@ -263,6 +265,74 @@ for _, list in pairs(LastPurpose.CATALOG_BY_CITY) do
     table.sort(list, function(a, b) return (a.order or 0) < (b.order or 0) end)
 end
 
+-- ===== Lineas de profesion =====
+--
+-- El hub muestra un dial de profesiones. La del Ladron esta siempre abierta
+-- (es la del prologo). Las demas se abren al: (1) completar el prologo del
+-- Ladron -- el golpe LastPurpose.PROLOGUE_HEIST_ID -- y (2) tener Nv. `level`
+-- en `perk`. `perk` es el NOMBRE del enum Perks (se resuelve con pcall en
+-- runtime; un nombre mal escrito degrada a "no se pudo comprobar", no revienta).
+LastPurpose.PROLOGUE_HEIST_ID = "louisville_knox_bank"
+
+LastPurpose.PROFESSION_LINES = {
+    ladron    = { id = "ladron",    name = "LADRON",    isThief = true },
+    medico    = { id = "medico",    name = "MEDICO",    perk = "Doctor",       level = 2, perkLabel = "Medicina" },
+    ingeniero = { id = "ingeniero", name = "INGENIERO", perk = "MetalWelding", level = 2, perkLabel = "Fabricacion" },
+    veterano  = { id = "veterano",  name = "VETERANO",  perk = "Aiming",       level = 2, perkLabel = "Punteria" },
+}
+LastPurpose.PROFESSION_LINE_ORDER = { "ladron", "medico", "ingeniero", "veterano" }
+
+--- ¿El jugador termino el prologo del Ladron (El ultimo golpe)?
+function LastPurpose.prologueDone(data)
+    return not not (data and data.completedHeists
+        and data.completedHeists[LastPurpose.PROLOGUE_HEIST_ID])
+end
+
+--- Comprueba Nv. de habilidad. Usa KeyasReq.skillAtLeast si esta cargado
+--- (cliente); si no, hace su propio pcall. `perkName` es el nombre del enum.
+--- @return boolean, string|nil
+function LastPurpose.checkSkill(player, perkName, level, label)
+    label = label or perkName
+    if not player then return false, "Sin jugador." end
+    local ok, perk = pcall(function()
+        if type(Perks) ~= "table" and type(Perks) ~= "userdata" then return nil end
+        local p = Perks[perkName]
+        if not p and Perks.FromString then p = Perks.FromString(perkName) end
+        return p
+    end)
+    if not ok or not perk then
+        return false, "No se pudo comprobar " .. tostring(label) .. "."
+    end
+    if KeyasReq and KeyasReq.skillAtLeast then
+        return KeyasReq.skillAtLeast(player, perk, level)
+    end
+    local ok2, cur = pcall(player.getPerkLevel, player, perk)
+    if not ok2 or type(cur) ~= "number" then
+        return false, "No se pudo comprobar " .. tostring(label) .. "."
+    end
+    if cur >= level then return true, nil end
+    return false, "Necesitas " .. tostring(label) .. " Nv. " .. tostring(level)
+        .. " (tienes " .. tostring(cur) .. ")."
+end
+
+--- Estado de una linea de profesion del hub.
+--- @return "open" | "locked", motivo (string|nil)
+function LastPurpose.professionLineStatus(lineId, data, player)
+    local line = LastPurpose.PROFESSION_LINES[tostring(lineId or "")]
+    if not line then return "locked", "Linea de profesion desconocida." end
+    if line.isThief then return "open", nil end
+    if not LastPurpose.prologueDone(data) then
+        return "locked", "Completa el prologo del Ladron (El ultimo golpe)."
+    end
+    if line.perk and line.level then
+        local ok, reason = LastPurpose.checkSkill(player, line.perk, line.level, line.perkLabel)
+        if not ok then
+            return "locked", reason or ("Sube " .. tostring(line.perkLabel) .. ".")
+        end
+    end
+    return "open", nil
+end
+
 function LastPurpose.cityOf(x, y)
     for key, city in pairs(LastPurpose.CITIES) do
         local b = city.bbox
@@ -337,8 +407,12 @@ function LastPurpose.heistStatus(id, data, player)
         local label = (LastPurpose.CITIES[entry.city] or {}).label or entry.city
         return "locked", "Explora " .. tostring(label) .. " o consigue su mapa."
     elseif u.type == "profession" then
-        -- Placeholder: el chequeo real (prologo + Nv. skill) se cablea con KeyasReq.
-        return "locked", "Requiere avanzar en la profesion."
+        -- La linea de profesion debe estar abierta (prologo + Nv. de habilidad).
+        local st, reason = LastPurpose.professionLineStatus(u.line, data, player)
+        if st ~= "open" then return "locked", reason end
+        -- Linea abierta: dentro de ella el primer golpe es "profession" y ya
+        -- esta disponible; los golpes 2+ de la linea usan completePrev.
+        return "available", nil
     end
     return "locked", "Bloqueada."
 end

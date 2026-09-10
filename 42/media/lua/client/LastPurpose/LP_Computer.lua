@@ -38,14 +38,46 @@ local APPS = {
     { id = "sistema",  label = "SISTEMA" },
 }
 
--- Profesiones (solo lectura por ahora - hito 2). La primera es la del
--- personaje (Ladron); el resto muestra su requisito y la lista bloqueada.
-local PROFS = {
-    { id = "ladron",    name = "LADRON",    unlocked = true },
-    { id = "medico",    name = "MEDICO",    req = "Completa el prologo del Ladron y sube Medicina a Nv. 2." },
-    { id = "ingeniero", name = "INGENIERO", req = "Completa el prologo del Ladron y sube Fabricacion a Nv. 2." },
-    { id = "veterano",  name = "VETERANO",  req = "Completa el prologo del Ladron y sube Punteria a Nv. 2." },
-}
+-- Dial de profesiones. Deriva de LastPurpose.PROFESSION_LINES (compartido);
+-- el estado abierto/bloqueado y su motivo se calculan en cada render con
+-- LastPurpose.professionLineStatus (depende del prologo + Nv. de habilidad).
+local PROFS = {}
+do
+    local order = LastPurpose.PROFESSION_LINE_ORDER
+        or { "ladron", "medico", "ingeniero", "veterano" }
+    for _, lid in ipairs(order) do
+        local line = LastPurpose.PROFESSION_LINES and LastPurpose.PROFESSION_LINES[lid]
+        PROFS[#PROFS + 1] = { id = lid, name = (line and line.name) or string.upper(lid) }
+    end
+    if #PROFS == 0 then PROFS[1] = { id = "ladron", name = "LADRON" } end
+end
+
+-- Estado de la linea que hay en el dial ahora mismo -> abierta?, motivo.
+local function profLineState(profId)
+    if LastPurpose.professionLineStatus then
+        local player = LastPurpose.getPlayerSafe and LastPurpose.getPlayerSafe(0)
+        local data = player and LastPurpose.getData and LastPurpose.getData(player)
+        local st, reason = LastPurpose.professionLineStatus(profId, data, player)
+        return st == "open", reason
+    end
+    return profId == "ladron", "Completa el prologo del Ladron."
+end
+
+-- Golpes del catalogo que pertenecen a una linea de profesion. El Ladron
+-- se queda con todo lo que NO sea de tipo "profession" (su cadena + las
+-- ciudades); cada otra linea con lo suyo (unlock.line == profId).
+local function lineEntries(profId)
+    local out = {}
+    for _, e in ipairs(LastPurpose.CATALOG or {}) do
+        local u = e.unlock or {}
+        if profId == "ladron" then
+            if u.type ~= "profession" then out[#out + 1] = e end
+        elseif u.type == "profession" and u.line == profId then
+            out[#out + 1] = e
+        end
+    end
+    return out
+end
 
 -- Notas del mundo (contenido estatico de solo lectura por ahora).
 local NOTES = {
@@ -416,6 +448,7 @@ end
 -- profesion cambia lo que se ve (las bloqueadas muestran su requisito).
 function LPComputer:profWidgetNode()
     local p = PROFS[self.prof]
+    local open = profLineState(p.id)
     local function cycle(d)
         return function()
             -- Envoltura con clamp explicito, NO modulo: `x % n` en Kahlua
@@ -425,7 +458,8 @@ function LPComputer:profWidgetNode()
             if n < 1 then n = #PROFS elseif n > #PROFS then n = 1 end
             self.prof = n
             local prof = PROFS[n]
-            self.selectedId = (prof and prof.unlocked and "louisville_knox_bank")
+            self.selectedId = (prof and profLineState(prof.id) and prof.id == "ladron"
+                    and "louisville_knox_bank")
                 or ("__locked_" .. (prof and prof.id or "?"))
             self:markDirty()
         end
@@ -440,8 +474,8 @@ function LPComputer:profWidgetNode()
                     RAIL_ON[1], RAIL_ON[2], RAIL_ON[3]) end
             end },
             { tag = "div", class = "prof-name", text = p.name },
-            { tag = "div", class = p.unlocked and "prof-tag" or "prof-tag lock",
-              text = p.unlocked and "PERFIL ACTIVO" or "LINEA BLOQUEADA" },
+            { tag = "div", class = open and "prof-tag" or "prof-tag lock",
+              text = open and "PERFIL ACTIVO" or "LINEA BLOQUEADA" },
         }},
         { tag = "div", class = "prof-nav", onClick = cycle(1), children = { { tag = "div", text = ">" } } },
     }}
@@ -451,11 +485,12 @@ function LPComputer:listPaneNode()
     local p = PROFS[self.prof]
     local children = { self:profWidgetNode(), { tag = "div", class = "rule-soft" } }
 
-    if not p.unlocked then
+    local open, reason = profLineState(p.id)
+    if not open then
         children[#children + 1] = { tag = "div", class = "city first", children = {
             { tag = "div", class = "city-title", text = "LINEA BLOQUEADA" },
             { tag = "div", class = "rule" },
-            { tag = "div", class = "city-hint", text = p.req or "" },
+            { tag = "div", class = "city-hint", text = reason or "Avanza en la historia." },
             { tag = "div", class = "missions", children = {
                 { tag = "div", class = "m-row locked sel", children = {
                     { tag = "div", class = "num", text = "-" },
@@ -470,44 +505,65 @@ function LPComputer:listPaneNode()
     local player = LastPurpose.getPlayerSafe(0)
     local data = player and LastPurpose.getData(player)
 
-    -- Una seccion por ciudad con entradas en LastPurpose.CATALOG, en el
-    -- orden de CITY_ORDER. Cada golpe muestra su estado calculado
-    -- (LastPurpose.heistStatus): done/active/available con su nombre real,
-    -- locked oculto con "?????????" y el motivo como pista de la ciudad.
+    -- Solo los golpes de esta linea de profesion. Linea abierta pero aun sin
+    -- golpes escritos -> aviso de "proximamente".
+    local mine = {}
+    for _, e in ipairs(lineEntries(p.id)) do mine[e.id] = true end
+    local anyRow = false
+
+    -- Una seccion por ciudad, en el orden de CITY_ORDER. Cada golpe muestra
+    -- su estado calculado (LastPurpose.heistStatus): done/active/available
+    -- con su nombre real, locked oculto con "?????????" y el motivo de pista.
     for _, cityKey in ipairs(CITY_ORDER) do
         local list = LastPurpose.CATALOG_BY_CITY and LastPurpose.CATALOG_BY_CITY[cityKey]
         if list and #list > 0 then
             local city = LastPurpose.CITIES and LastPurpose.CITIES[cityKey]
             local rows = {}
             local firstReason
-            for i, entry in ipairs(list) do
-                local status, reason = LastPurpose.heistStatus(entry.id, data, player)
-                local locked = (status == "locked")
-                if i == 1 and locked then firstReason = reason end
-                local sel = entry.id == self.selectedId
-                local cls = "m-row"
-                if locked then cls = cls .. " locked" end
-                if sel then cls = cls .. " sel" end
-                local rid = entry.id
-                rows[#rows + 1] = { tag = "div", class = cls, key = rid,
-                    onClick = function() self.selectedId = rid; self:markDirty() end,
-                    children = {
-                        { tag = "div", class = "num", text = i .. "." },
-                        { tag = "div", class = "m-name", text = locked and REDACTED or entry.name },
-                        { tag = "div", class = "dot " .. statusDot(status, data) },
-                    },
+            local shown = 0
+            for _, entry in ipairs(list) do
+                if mine[entry.id] then
+                    shown = shown + 1
+                    local status, r = LastPurpose.heistStatus(entry.id, data, player)
+                    local locked = (status == "locked")
+                    if shown == 1 and locked then firstReason = r end
+                    local sel = entry.id == self.selectedId
+                    local cls = "m-row"
+                    if locked then cls = cls .. " locked" end
+                    if sel then cls = cls .. " sel" end
+                    local rid = entry.id
+                    rows[#rows + 1] = { tag = "div", class = cls, key = rid,
+                        onClick = function() self.selectedId = rid; self:markDirty() end,
+                        children = {
+                            { tag = "div", class = "num", text = shown .. "." },
+                            { tag = "div", class = "m-name", text = locked and REDACTED or entry.name },
+                            { tag = "div", class = "dot " .. statusDot(status, data) },
+                        },
+                    }
+                end
+            end
+            if #rows > 0 then
+                anyRow = true
+                local kids = {
+                    { tag = "div", class = "city-title", text = (city and city.label) or cityKey },
+                    { tag = "div", class = "rule" },
                 }
+                if firstReason then
+                    kids[#kids + 1] = { tag = "div", class = "city-hint", text = firstReason }
+                end
+                kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
+                children[#children + 1] = { tag = "div", class = "city", children = kids }
             end
-            local kids = {
-                { tag = "div", class = "city-title", text = (city and city.label) or cityKey },
-                { tag = "div", class = "rule" },
-            }
-            if firstReason then
-                kids[#kids + 1] = { tag = "div", class = "city-hint", text = firstReason }
-            end
-            kids[#kids + 1] = { tag = "div", class = "missions", children = rows }
-            children[#children + 1] = { tag = "div", class = "city", children = kids }
         end
+    end
+
+    if not anyRow then
+        children[#children + 1] = { tag = "div", class = "city first", children = {
+            { tag = "div", class = "city-title", text = p.name },
+            { tag = "div", class = "rule" },
+            { tag = "div", class = "city-hint",
+              text = "Linea abierta. Sus golpes llegan en una version proxima." },
+        }}
     end
     return { tag = "div", class = "pane list-pane", children = children }
 end
@@ -515,9 +571,10 @@ end
 function LPComputer:detailPaneNode()
     local player = LastPurpose.getPlayerSafe(0)
 
-    -- Profesion bloqueada: expediente clasificado con su requisito.
+    -- Linea de profesion bloqueada: expediente clasificado con su requisito.
     local prof = PROFS[self.prof]
-    if not prof.unlocked then
+    local open, reason = profLineState(prof.id)
+    if not open then
         return { tag = "div", class = "pane detail-pane", children = {
             { tag = "div", class = "d-head", children = {
                 { tag = "div", class = "d-title", children = {
@@ -530,14 +587,33 @@ function LPComputer:detailPaneNode()
             { tag = "div", class = "sec", children = {
                 { tag = "div", class = "sec-h", text = "REQUISITO" },
                 { tag = "div", class = "rule-soft" },
-                { tag = "div", class = "body", text = prof.req or "Avanza en la historia." },
-                { tag = "div", class = "body-soft", text = "Sus golpes y su prologo se abren al cumplir el requisito." },
+                { tag = "div", class = "body", text = reason or "Avanza en la historia." },
+                { tag = "div", class = "body-soft", text = "Sus golpes se abren al cumplir el requisito." },
             }},
         }}
     end
 
     local row, city = self:selectedRow()
-    if not row then return { tag = "div", class = "pane detail-pane" } end
+    if not row then
+        -- Linea abierta pero sin golpe seleccionado (p. ej. una linea de
+        -- profesion sin contenido todavia).
+        return { tag = "div", class = "pane detail-pane", children = {
+            { tag = "div", class = "d-head", children = {
+                { tag = "div", class = "d-title", children = {
+                    { tag = "div", class = "d-name", text = prof.name },
+                    { tag = "div", class = "d-city", text = "LINEA DE PROFESION" },
+                }},
+                { tag = "div", class = "badge", text = "ABIERTA", style = {
+                    color = "#1c6b3a", backgroundColor = "#cfe6d5", borderColor = "#1c6b3a" } },
+            }},
+            { tag = "div", class = "sec", children = {
+                { tag = "div", class = "sec-h", text = "ESTADO" },
+                { tag = "div", class = "rule-soft" },
+                { tag = "div", class = "body", text = "Cumpliste el requisito de esta linea." },
+                { tag = "div", class = "body-soft", text = "Sus golpes llegan en una version proxima." },
+            }},
+        }}
+    end
 
     local data = player and LastPurpose.getData(player)
     local status, reason = LastPurpose.heistStatus(row.id, data, player)
