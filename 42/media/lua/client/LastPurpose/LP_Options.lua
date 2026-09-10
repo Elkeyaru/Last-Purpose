@@ -40,8 +40,9 @@ local function build()
     -- por eso se anade a mano y no con opts.addDebugTickbox.
     pcall(function() panel:addTitle("Last Purpose") end)
     pcall(function()
-        panel:addTickBox("debug", "Registro de depuracion", false,
-            "Escribe trazas detalladas de Last Purpose en la consola (console.txt).")
+        panel:addTickBox("debug", "Registro de depuracion", true,
+            "Escribe trazas detalladas de Last Purpose en la consola (console.txt). "
+            .. "Activado por defecto mientras el mod esta en pruebas; puedes apagarlo.")
     end)
 
     LastPurpose.optionsPanel = panel

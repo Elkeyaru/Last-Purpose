@@ -19,7 +19,11 @@ LastPurpose = LastPurpose or {}
 
 -- ===== Config =====
 
-LastPurpose.DEBUG = false
+-- Solo el registro de consola viene activado (util mientras se prueba Hito 2
+-- y para los reportes con console.txt). La activacion sigue tardando sus 15
+-- dias reales y la frecuencia de radio no se revela. La casilla "Registro de
+-- depuracion" (Opciones -> Mods) lo puede apagar.
+LastPurpose.DEBUG = true
 LastPurpose.DEBUG_FAST_ACTIVATION = false
 LastPurpose.DEBUG_SHOW_EXACT_FREQUENCY = false
 
