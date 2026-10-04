@@ -33,6 +33,77 @@ module LastPurpose
         Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
     }
 
+    /* Bolsa sellada/abierta de "La ultima exposicion" y "El cielo tiene
+       dueno": mismo patron exacto que la del Knox Bank (duffel gris ya
+       probado), solo cambia el nombre interno para que el botin de cada
+       golpe tenga su propio tipo de item (ver LP_HeistLoot.lua /
+       LP_SafehouseAnchor.lua, que leen heist.lootBagType/openBagType). */
+    item SealedGalleryLoot
+    {
+        DisplayCategory = Bag,
+        ItemType = base:normal,
+        Weight = 10.0,
+        IconsForTexture = DuffelBag_Grey,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        WorldStaticModel = LastPurposeLootBagGround,
+    }
+
+    item OpenGalleryLootBag
+    {
+        DisplayCategory = Bag,
+        ItemType = base:container,
+        Weight = 2.0,
+        IconsForTexture = DuffelBag_Grey,
+        CanBeEquipped = base:back,
+        CanHaveHoles = false,
+        Capacity = 24,
+        CloseSound = CloseBag,
+        ClothingItem = Bag_BurglarBag,
+        EquipSound = EquipDuffleBag,
+        OpenSound = OpenBag,
+        PutInSound = PutItemInBag,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        RunSpeedModifier = 0.95,
+        WeightReduction = 60,
+        WorldStaticModel = LastPurposeLootBagGround,
+        Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
+    }
+
+    item SealedPenthouseLoot
+    {
+        DisplayCategory = Bag,
+        ItemType = base:normal,
+        Weight = 10.0,
+        IconsForTexture = DuffelBag_Grey,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        WorldStaticModel = LastPurposeLootBagGround,
+    }
+
+    item OpenPenthouseLootBag
+    {
+        DisplayCategory = Bag,
+        ItemType = base:container,
+        Weight = 2.0,
+        IconsForTexture = DuffelBag_Grey,
+        CanBeEquipped = base:back,
+        CanHaveHoles = false,
+        Capacity = 24,
+        CloseSound = CloseBag,
+        ClothingItem = Bag_BurglarBag,
+        EquipSound = EquipDuffleBag,
+        OpenSound = OpenBag,
+        PutInSound = PutItemInBag,
+        ReplaceInPrimaryHand = Bag_DuffelBag_RHand holdingbagright,
+        ReplaceInSecondHand = Bag_DuffelBag_LHand holdingbagleft,
+        RunSpeedModifier = 0.95,
+        WeightReduction = 60,
+        WorldStaticModel = LastPurposeLootBagGround,
+        Tags = base:isfirefuel;base:isfiretinder;base:neverempty,
+    }
+
     /* Walkie de la banda: copia de Base.WalkieTalkie5 (militar). Item propio
        para poder darle un nombre y, mas adelante, precargar las frecuencias
        de otros golpes cuando se descubran los mapas. */

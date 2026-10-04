@@ -163,6 +163,50 @@ end
 
 -- ---- estado de la mision ------------------------------------------------
 
+-- Nombres cortos en espanol para los tipos de objeto de valor mas usados en
+-- LastPurpose.HEISTS. Si aparece uno nuevo que no esta aqui, se muestra tal
+-- cual (sin romper nada, solo menos bonito).
+local VALUABLE_LABELS = {
+    ["Base.SmallGoldBar"] = "lingotes de oro",
+    ["Base.GoldBar"] = "lingotes de oro",
+    ["Base.Diamond"] = "diamantes",
+    ["Base.MoneyBundle"] = "fajos de dinero",
+    ["Base.GoldCoin"] = "monedas de oro",
+    ["Base.Necklace_GoldDiamond"] = "collares de oro y diamante",
+    ["Base.NecklaceLong_GoldDiamond"] = "un collar de oro y diamante",
+}
+local function valuableLabel(itemType)
+    return VALUABLE_LABELS[itemType] or tostring(itemType):gsub("^Base%.", "")
+end
+
+-- Construye los 3 tiles de recompensa + el resumen en texto a partir del
+-- heist.loot real (antes era un numero fijo igual para los 3 golpes).
+local function summarizeLoot(heist)
+    local loot = heist and heist.loot
+    if not loot then
+        return { { "cash", "?", "EFECTIVO" }, { "gold", "?", "OBJETOS" }, { "crate", "+", "SUMINISTROS" } },
+            "Recompensa por confirmar."
+    end
+    local cashCount, firstValuable, parts = nil, nil, {}
+    for _, v in ipairs(loot.valuables or {}) do
+        if v.type == "Base.MoneyBundle" then
+            cashCount = v.count
+        elseif not firstValuable then
+            firstValuable = v
+        end
+        parts[#parts + 1] = tostring(v.count) .. " " .. valuableLabel(v.type)
+    end
+    local tiles = {
+        { "cash", cashCount and ("x" .. cashCount) or "-", "EFECTIVO" },
+        { "gold", firstValuable and ("x" .. firstValuable.count) or "-",
+          firstValuable and string.upper(valuableLabel(firstValuable.type)) or "OBJETOS" },
+        { "crate", "+", "SUMINISTROS" },
+    }
+    local summary = (#parts > 0 and table.concat(parts, ", ") or "objetos de valor")
+        .. ", suministros variados, municion y " .. tostring(loot.nimbleLevels or 0) .. " niveles de Destreza."
+    return tiles, summary
+end
+
 -- devuelve: labelBadge, colorBadge, textoBoton, habilitado
 local function knoxStatus(data)
     if LastPurpose.stageIs(data, "completed") then
@@ -437,6 +481,21 @@ function LPComputer:onSelectHeist(id)
     if not entry or not entry.implemented then return end
     local st = LastPurpose.heistStatus(id, data, player)
     if st ~= "available" then return end
+
+    -- Un golpe nuevo tras archivar el anterior: la maquina de etapas (un
+    -- unico data.stage para toda la partida) quedo en "completed" y nunca
+    -- vuelve sola a "inactive". Hay que limpiar el estado de la partida
+    -- anterior y reactivarla, sin repetir la espera de activacion inicial
+    -- (ya se activo con el primer golpe).
+    if LastPurpose.stageIs(data, "completed") then
+        if LastPurpose.resetHeistRun then LastPurpose.resetHeistRun(data) end
+        LastPurpose.heistEscapeActive = false
+        LastPurpose.heistAlarmRuntime = {}
+        data.activatedAtHours = player:getHoursSurvived()
+        LastPurpose.setStage(data, "prep_started")
+        LastPurpose.debugPrint("Nuevo golpe tras completar el anterior: maquina de etapas reiniciada")
+    end
+
     data.selectedHeist = id
     data.activeHeistId = id
     LastPurpose.showThought(player, { "Elegido. Manos a la obra." })
@@ -669,7 +728,7 @@ function LPComputer:detailPaneNode()
     }
 
     local tiles = {}
-    local tileData = { { "cash", "$25 000", "EFECTIVO" }, { "gold", "x5", "LINGOTES" }, { "crate", "+", "SUMINISTROS" } }
+    local tileData, rewardSummary = summarizeLoot(heist)
     for _, t in ipairs(tileData) do
         tiles[#tiles + 1] = { tag = "div", class = "tile", children = {
             { tag = "div", class = "ic", onPaint = paintIcon(t[1]) },
@@ -708,7 +767,7 @@ function LPComputer:detailPaneNode()
             { tag = "div", class = "sec-h", text = "RECOMPENSA ESTIMADA" },
             { tag = "div", class = "rule-soft" },
             { tag = "div", class = "reward", children = tiles },
-            { tag = "div", class = "body-soft", text = "5 lingotes de oro, 4 diamantes, 6 fajos, suministros de mid-game, municion y 2 niveles de Destreza." },
+            { tag = "div", class = "body-soft", text = rewardSummary },
         }},
         cta,
     }}

@@ -2,7 +2,12 @@ LastPurpose = LastPurpose or {}
 
 -- Funcion, no una constante de archivo: LastPurpose.World vive en un archivo
 -- compartido que puede no haber cargado todavia cuando este archivo carga.
-local function ORIGIN() return LastPurpose.World.ALARM_ORIGIN end
+-- Cada golpe tiene su propio punto de origen de la emboscada
+-- (heist.escapeOrigin); si no lo define, cae al del Knox Bank.
+local function ORIGIN(data)
+    local heist = data and LastPurpose.getHeist(data.selectedHeist)
+    return (heist and heist.escapeOrigin) or LastPurpose.World.ALARM_ORIGIN
+end
 local ALARM_DURATION_MS = 35000
 local WAVE_COUNT = 5
 local ZOMBIES_PER_WAVE = 40
@@ -29,13 +34,14 @@ local function startAlarm(player, data, now)
 
     data.ambushTriggered = true
     data.ambushWavesSpawned = tonumber(data.ambushWavesSpawned) or 0
-    LastPurpose.debugPrint("Alarma del Knox Bank activada")
+    LastPurpose.debugPrint("Alarma de emboscada activada (" .. tostring(data.selectedHeist) .. ")")
 end
 
 -- Genera una oleada grupo por grupo. Si el motor falla a mitad de una
 -- oleada, recordamos que grupos ya se procesaron para no repetirlos en el
 -- siguiente intento.
 local function spawnWave(data)
+    local origin = ORIGIN(data)
     local spawned = 0
     local clusterSize = math.floor(ZOMBIES_PER_WAVE / CLUSTERS_PER_WAVE)
     local baseAngle = ZombRand(360)
@@ -46,15 +52,15 @@ local function spawnWave(data)
         local ok, err = pcall(function()
             local angle = math.rad(baseAngle + math.floor((360 / CLUSTERS_PER_WAVE) * cluster) + ZombRand(-12, 13))
             local radius = ZombRand(SPAWN_MIN_RADIUS, SPAWN_MAX_RADIUS + 1)
-            local spawnX = math.floor(ORIGIN().x + math.cos(angle) * radius)
-            local spawnY = math.floor(ORIGIN().y + math.sin(angle) * radius)
-            local zombies = addZombiesInOutfit(spawnX, spawnY, ORIGIN().z, clusterSize, nil, 50)
+            local spawnX = math.floor(origin.x + math.cos(angle) * radius)
+            local spawnY = math.floor(origin.y + math.sin(angle) * radius)
+            local zombies = addZombiesInOutfit(spawnX, spawnY, origin.z, clusterSize, nil, 50)
             if zombies then
                 for i = 0, zombies:size() - 1 do
                     local zombie = zombies:get(i)
                     if zombie then
                         spawned = spawned + 1
-                        pcall(function() zombie:pathToLocation(ORIGIN().x, ORIGIN().y, ORIGIN().z) end)
+                        pcall(function() zombie:pathToLocation(origin.x, origin.y, origin.z) end)
                     end
                 end
             end
@@ -141,7 +147,8 @@ function LastPurpose.updateHeistEscape()
     data.ambushRemainingMs = math.max(0, ALARM_DURATION_MS - (now - runtime.startedAt))
 
     if now >= runtime.nextNoiseAt then
-        addSound(player, ORIGIN().x, ORIGIN().y, ORIGIN().z, 220, 100)
+        local origin = ORIGIN(data)
+        addSound(player, origin.x, origin.y, origin.z, 220, 100)
         runtime.nextNoiseAt = now + 1000
     end
 

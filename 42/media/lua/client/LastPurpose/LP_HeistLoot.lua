@@ -1,8 +1,16 @@
 LastPurpose = LastPurpose or {}
 
-local LOOT_ID = "louisville_knox_bank"
-local BAG_TYPE = "LastPurpose.SealedKnoxBankLoot"
-local function SPAWN() return LastPurpose.World.BANK_LOOT_SPAWN end
+-- Generico para cualquier golpe: lee lootSpawn/lootBagType del golpe activo
+-- (LastPurpose.ensureSelectedHeist) en vez de apuntar siempre al Knox Bank.
+-- Los dos campos son obligatorios en LastPurpose.HEISTS; si faltan en algun
+-- golpe nuevo, cae al valor del Knox Bank para no romper nada (pero conviene
+-- rellenarlos).
+local function lootSpawnOf(heist)
+    return (heist and heist.lootSpawn) or LastPurpose.World.BANK_LOOT_SPAWN
+end
+local function bagTypeOf(heist)
+    return (heist and heist.lootBagType) or "LastPurpose.SealedKnoxBankLoot"
+end
 local PICKUP_CHECK_RADIUS = 80
 
 -- NO-OP a proposito. El tinte por codigo (setCustomColor + setColor*) sobre
@@ -14,11 +22,11 @@ function LastPurpose.applyLootVisual(item)
     -- deliberadamente sin efecto
 end
 
-local function markLootBag(bag)
+local function markLootBag(bag, heistId)
     if not bag then return nil end
     LastPurpose.applyLootVisual(bag)
     local itemData = bag:getModData()
-    itemData.LastPurposeLootId = LOOT_ID
+    itemData.LastPurposeLootId = heistId
     itemData.LastPurposeLootSealed = true
     return bag
 end
@@ -32,30 +40,33 @@ local function spawnCorpse(x, y, z)
     end)
 end
 
-local function spawnLootScene(data)
-    local square = getCell():getGridSquare(SPAWN().x, SPAWN().y, SPAWN().z)
+local function spawnLootScene(data, heist)
+    local spawn = lootSpawnOf(heist)
+    local square = getCell():getGridSquare(spawn.x, spawn.y, spawn.z)
     if not square then
         if not data.lootSquareWarningPrinted then
-            print(string.format("[LastPurpose] La casilla del botin aun no esta cargada: %d,%d,%d", SPAWN().x, SPAWN().y, SPAWN().z))
+            print(string.format("[LastPurpose] La casilla del botin aun no esta cargada: %d,%d,%d", spawn.x, spawn.y, spawn.z))
             data.lootSquareWarningPrinted = true
         end
         return false
     end
 
-    local bag = markLootBag(square:AddWorldInventoryItem(BAG_TYPE, 0.5, 0.5, 0))
+    local bag = markLootBag(square:AddWorldInventoryItem(bagTypeOf(heist), 0.5, 0.5, 0), heist.id)
     if not bag then
-        print("[LastPurpose] No se pudo crear la bolsa sellada del Knox Bank")
+        print("[LastPurpose] No se pudo crear la bolsa sellada de " .. tostring(heist.id))
         return false
     end
 
-    spawnCorpse(SPAWN().x - 1, SPAWN().y, SPAWN().z)
-    spawnCorpse(SPAWN().x + 1, SPAWN().y, SPAWN().z)
+    spawnCorpse(spawn.x - 1, spawn.y, spawn.z)
+    spawnCorpse(spawn.x + 1, spawn.y, spawn.z)
     data.lootSpawned = true
     data.lootSquareWarningPrinted = nil
-    LastPurpose.debugPrint(string.format("Escena del botin creada en %d,%d,%d", SPAWN().x, SPAWN().y, SPAWN().z))
+    LastPurpose.debugPrint(string.format("Escena del botin creada en %d,%d,%d (%s)", spawn.x, spawn.y, spawn.z, tostring(heist.id)))
     return true
 end
 
+-- Acepta la bolsa sellada/abierta de CUALQUIER golpe conocido (no solo el
+-- Knox Bank): basta con que LastPurposeLootId resuelva a un golpe real.
 function LastPurpose.findHeistLootBag(container, seen)
     if not container or not container.getItems then return nil end
     seen = seen or {}
@@ -67,7 +78,7 @@ function LastPurpose.findHeistLootBag(container, seen)
         local item = items:get(i)
         if item then
             local itemData = item:getModData()
-            if itemData and itemData.LastPurposeLootId == LOOT_ID then
+            if itemData and itemData.LastPurposeLootId and LastPurpose.getHeist(itemData.LastPurposeLootId) then
                 LastPurpose.applyLootVisual(item)
                 return item
             end
@@ -87,14 +98,19 @@ function LastPurpose.updateHeistLoot(player)
     if not LastPurpose.stageIs(data, "heist_active") then return end
 
     local heist = LastPurpose.ensureSelectedHeist(player)
-    if not heist or heist.id ~= LOOT_ID then return end
+    if not heist then return end
 
     local carriedBag = LastPurpose.findHeistLootBag(player:getInventory())
     if not data.lootSpawned and not carriedBag then
-        local hour = getGameTime():getHour()
-        local isNight = hour >= LastPurpose.World.NIGHT_START_HOUR or hour < LastPurpose.World.NIGHT_END_HOUR
-        if not isNight then return end
-        spawnLootScene(data)
+        -- La mayoria de los golpes se hacen de noche (ver requiresNight en
+        -- LastPurpose.HEISTS); los que no lo exigen generan el botin en
+        -- cuanto el golpe esta activo.
+        if heist.requiresNight ~= false then
+            local hour = getGameTime():getHour()
+            local isNight = hour >= LastPurpose.World.NIGHT_START_HOUR or hour < LastPurpose.World.NIGHT_END_HOUR
+            if not isNight then return end
+        end
+        spawnLootScene(data, heist)
         return
     end
 
@@ -114,7 +130,7 @@ function LastPurpose.updateHeistLoot(player)
             "Ya lo tengo.",
             "Ahora tengo que salir de aqui con vida.",
         })
-        LastPurpose.debugPrint("El jugador recogio el botin del Knox Bank")
+        LastPurpose.debugPrint("El jugador recogio el botin (" .. tostring(heist.id) .. ")")
     end
 end
 
@@ -129,7 +145,10 @@ function LastPurpose.updateHeistLootPickup()
     if not player or not LastPurpose.isBurglar(player) then return end
     local data = LastPurpose.getData(player)
     if not LastPurpose.stageIs(data, "heist_active") then return end
-    local dx, dy = player:getX() - SPAWN().x, player:getY() - SPAWN().y
+    local heist = LastPurpose.getHeist(data.selectedHeist)
+    if not heist then return end
+    local spawn = lootSpawnOf(heist)
+    local dx, dy = player:getX() - spawn.x, player:getY() - spawn.y
     if dx * dx + dy * dy > PICKUP_CHECK_RADIUS * PICKUP_CHECK_RADIUS then return end
     pickupTick = pickupTick + 1
     if pickupTick % 15 ~= 0 then return end

@@ -6,5 +6,9 @@
     "LastPurpose.BandWalkieTalkie": "The band's walkie-talkie",
     "LastPurpose.TrophyKnoxIngot": "Engraved Knox Bank ingot",
     "LastPurpose.TrophyCrimsonLady": "\"The Lady in Crimson\"",
-    "LastPurpose.TrophyPenthouseGoblet": "The penthouse gold goblet"
+    "LastPurpose.TrophyPenthouseGoblet": "The penthouse gold goblet",
+    "LastPurpose.SealedGalleryLoot": "Sealed gallery loot bag",
+    "LastPurpose.OpenGalleryLootBag": "Gallery loot bag",
+    "LastPurpose.SealedPenthouseLoot": "Sealed penthouse loot bag",
+    "LastPurpose.OpenPenthouseLootBag": "Penthouse loot bag"
 }

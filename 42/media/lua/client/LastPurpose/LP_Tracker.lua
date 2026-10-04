@@ -38,9 +38,9 @@ local CHAPTERS = {
     { id = "clue", title = "III. El punto de reunion", fromStage = "radio_heard", toStageExclusive = "note_read",
       recap = "Hallaste y leiste la nota cifrada." },
     { id = "scout", title = "IV. Reconocimiento", fromStage = "note_read", toStageExclusive = "heist_active",
-      recap = "Estudiaste las entradas del banco sin ser visto." },
+      recap = "Estudiaste el objetivo sin ser visto." },
     { id = "heist", title = "V. El golpe", fromStage = "heist_active", toStageExclusive = "loot_taken",
-      recap = "Entraste al banco y tomaste el botin." },
+      recap = "Entraste y tomaste el botin." },
     { id = "escape", title = "VI. La huida", fromStage = "loot_taken", toStageExclusive = "review_loot",
       recap = "Escapaste de Louisville con vida y el botin." },
     { id = "ending", title = "VII. El refugio", fromStage = "review_loot", toStageExclusive = nil,
@@ -288,27 +288,35 @@ end
 local function drawScoutStage(self, x, y, w, player)
     local heist = LastPurpose.ensureSelectedHeist(player)
     local cy = drawTitle(self, x, y, w, "Reconoce el objetivo")
-    cy = drawBody(self, x, cy, w, heist and heist.destination or "Knox Bank", INK.current)
-    drawBody(self, x, cy, w, "Acercate al banco sin entrar.")
+    cy = drawBody(self, x, cy, w, heist and heist.destination or "Objetivo desconocido", INK.current)
+    drawBody(self, x, cy, w, "Acercate sin entrar.")
 end
 
-local function drawWaitForNightStage(self, x, y, w)
-    local cy = drawTitle(self, x, y, w, "Espera la oscuridad")
-    cy = drawBody(self, x, cy, w, "Reconocimiento completado.", INK.done)
-    drawBody(self, x, cy, w, "El banco sigue sellado. Llega entre las 20:00 y las 05:00 para iniciar el golpe.", INK.current)
+-- "bank_scouted" es el nombre historico de la etapa, pero ya cubre
+-- cualquier golpe. heist.requiresNight (Knox = true; los demas golpes no
+-- exigen ventana nocturna) decide el texto.
+local function drawWaitForNightStage(self, x, y, w, player)
+    local heist = LastPurpose.ensureSelectedHeist(player)
+    local cy = drawTitle(self, x, y, w, "Reconocimiento completado")
+    cy = drawBody(self, x, cy, w, "Ya conoces el lugar.", INK.done)
+    if heist and heist.requiresNight == false then
+        drawBody(self, x, cy, w, "Vuelve cuando quieras para empezar el golpe.", INK.current)
+    else
+        drawBody(self, x, cy, w, "El objetivo sigue sellado. Llega entre las 20:00 y las 05:00 para iniciar el golpe.", INK.current)
+    end
 end
 
 local function drawHeistActiveStage(self, x, y, w, data)
     local cy = drawTitle(self, x, y, w, "El golpe ha comenzado")
-    cy = drawBody(self, x, cy, w, "Encuentra el botin dentro del banco.", INK.current)
+    cy = drawBody(self, x, cy, w, "Encuentra el botin en el objetivo.", INK.current)
     if data.lootSpawned then drawBody(self, x, cy, w, "Busca junto a los dos cadaveres.", INK.muted) end
 end
 
 local function drawLootTakenStage(self, x, y, w, data)
     local cy = drawTitle(self, x, y, w, "Escapa con el botin")
-    cy = drawBody(self, x, cy, w, "Botin del Knox Bank asegurado.", INK.current)
+    cy = drawBody(self, x, cy, w, "Botin asegurado.", INK.current)
     if data.ambushTriggered and not data.ambushCompleted then
-        cy = drawBody(self, x, cy, w, "ALERTA: escapa del banco ahora.", INK.alert)
+        cy = drawBody(self, x, cy, w, "ALERTA: escapa de la zona ahora.", INK.alert)
         drawBody(self, x, cy, w, string.format("Amenaza: oleada %d / 5", tonumber(data.ambushWavesSpawned) or 0), INK.muted)
     else
         drawBody(self, x, cy, w, "Sal de Louisville con vida.", INK.alert)
@@ -346,7 +354,7 @@ local STAGE_RENDERERS = {
     radio_heard = function(self, x, y, w, player, data) drawClueStage(self, x, y, w, player, data) end,
     clue_found = function(self, x, y, w, player, data) drawNoteStage(self, x, y, w, player) end,
     note_read = function(self, x, y, w, player, data) drawScoutStage(self, x, y, w, player) end,
-    bank_scouted = function(self, x, y, w, player, data) drawWaitForNightStage(self, x, y, w) end,
+    bank_scouted = function(self, x, y, w, player, data) drawWaitForNightStage(self, x, y, w, player) end,
     heist_active = function(self, x, y, w, player, data) drawHeistActiveStage(self, x, y, w, data) end,
     loot_taken = function(self, x, y, w, player, data) drawLootTakenStage(self, x, y, w, data) end,
     returning = function(self, x, y, w, player, data) drawReturningStage(self, x, y, w, player, data) end,

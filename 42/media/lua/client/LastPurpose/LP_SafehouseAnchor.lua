@@ -5,11 +5,22 @@ local CUSTOM_SPRITES = {
     ["lastpurpose_planning_01_0"] = true,
     ["lastpurpose_planning_01_1"] = true,
 }
-local function ORIGIN() return LastPurpose.World.BANK_ESCAPE_ORIGIN end
+-- Punto de huida del golpe EN CURSO (heist.escapeOrigin); si el golpe no lo
+-- define, cae al del Knox Bank. data llega como parametro porque el Knox
+-- Bank original no lo necesitaba (un unico golpe posible).
+local function ORIGIN(data)
+    local heist = data and LastPurpose.getHeist(data.selectedHeist)
+    return (heist and heist.escapeOrigin) or LastPurpose.World.BANK_ESCAPE_ORIGIN
+end
 local function ESCAPE_DISTANCE() return LastPurpose.World.ESCAPE_DISTANCE end
 local function RETURN_RADIUS() return LastPurpose.World.RETURN_RADIUS end
 local function SEARCH_RADIUS() return LastPurpose.World.TABLE_SEARCH_RADIUS end
-local OPEN_LOOT_BAG_TYPE = "LastPurpose.OpenKnoxBankLootBag"
+-- Tipo de bolsa abierta del golpe EN CURSO; cae al del Knox Bank si no esta
+-- definido.
+local function openBagTypeOf(data)
+    local heist = data and LastPurpose.getHeist(data.selectedHeist)
+    return (heist and heist.openBagType) or "LastPurpose.OpenKnoxBankLootBag"
+end
 
 local function isPlanningTable(object)
     local sprite = object and object:getSprite()
@@ -83,17 +94,18 @@ local function establishSafehouse(player, square, tableObject)
 end
 
 local function openLootBag(player, sealedBag, data)
-    if sealedBag:getFullType() == OPEN_LOOT_BAG_TYPE then
+    local openBagType = openBagTypeOf(data)
+    if sealedBag:getFullType() == openBagType then
         LastPurpose.applyLootVisual(sealedBag)
         return sealedBag
     end
 
-    local openBag = player:getInventory():AddItem(OPEN_LOOT_BAG_TYPE)
+    local openBag = player:getInventory():AddItem(openBagType)
     if not openBag then return nil end
     LastPurpose.applyLootVisual(openBag)
 
     local openData = openBag:getModData()
-    openData.LastPurposeLootId = "louisville_knox_bank"
+    openData.LastPurposeLootId = data.selectedHeist
     openData.LastPurposeLootSealed = false
     openData.LastPurposeLootOpened = true
 
@@ -229,7 +241,7 @@ function LastPurpose.reviewHeistLoot(player)
 
     local lootBag = LastPurpose.findHeistLootBag(player:getInventory())
     if not lootBag then
-        if HaloTextHelper then HaloTextHelper.addTextWithArrow(player, "Necesito el botin del banco.", false, 255, 190, 90) end
+        if HaloTextHelper then HaloTextHelper.addTextWithArrow(player, "Necesito el botin del golpe.", false, 255, 190, 90) end
         return
     end
 
@@ -307,7 +319,8 @@ function LastPurpose.updateSafehouseAnchor()
     end
 
     if LastPurpose.stageIs(data, "loot_taken") and LastPurpose.findHeistLootBag(player:getInventory()) then
-        local dx, dy = player:getX() - ORIGIN().x, player:getY() - ORIGIN().y
+        local origin = ORIGIN(data)
+        local dx, dy = player:getX() - origin.x, player:getY() - origin.y
         if (dx * dx) + (dy * dy) >= (ESCAPE_DISTANCE() * ESCAPE_DISTANCE()) then
             LastPurpose.setStage(data, "returning")
             data.bankEscapeCompleted = true

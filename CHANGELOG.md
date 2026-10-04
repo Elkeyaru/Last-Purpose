@@ -8,6 +8,38 @@ referencia histórica.
 ## Sin publicar
 
 ### Añadido
+- **Los 3 golpes de la cadena de Louisville ya están implementados**
+  (`implemented = true` en `LastPurpose.CATALOG`): "La última exposición"
+  (galería, robar «La dama de carmesí») y "El cielo tiene dueño" (ático,
+  la fortuna de un empresario) se suman al Knox Bank, con su propio
+  diálogo de radio, 9 puntos de reunión candidatos cada uno, escena de
+  botín, huida y recompensa. Ninguno exige ventana nocturna (a diferencia
+  del Knox Bank) — el golpe arranca en cuanto llegas al objetivo tras
+  reconocerlo. **Coordenadas sin verificar en partida** (tomadas de
+  `narrative-drafts/`, cruzadas solo parcialmente contra una guía de
+  comunidad): hay que caminarlas y ajustar `x`/`y`/`lootSpawn`/
+  `escapeOrigin`/`clueSites` en `LP_Heists.lua` cuando se confirmen.
+- **El motor de golpes ahora es genérico, no solo del Knox Bank.** Hasta
+  ahora `data.stage` nunca volvía a `"inactive"` tras `"completed"` —
+  aunque el hub (Hito 2) dejara elegir un segundo golpe, la máquina de
+  etapas no se reactivaba y la partida quedaba parada en el primero para
+  siempre. `LPComputer:onSelectHeist` ahora detecta ese caso, limpia el
+  rastro del golpe anterior (`LastPurpose.resetHeistRun`, nuevo) y reinicia
+  la máquina en `"prep_started"` (sin repetir la espera de activación).
+  Además, `LP_HeistLoot`, `LP_HeistEscape` y `LP_SafehouseAnchor` leían
+  coordenadas y tipos de ítem fijos del Knox Bank sin importar qué golpe
+  estuviera activo; ahora los leen del golpe en curso
+  (`heist.lootSpawn/lootBagType/openBagType/escapeOrigin`,
+  `heist.requiresNight`). El diario (`LP_Tracker`) y los pensamientos del
+  jugador (`LP_Investigation`) ya no dicen "Knox Bank" para cualquier
+  golpe.
+- **Dos bolsas de botín nuevas** (`SealedGalleryLoot`/`OpenGalleryLootBag`,
+  `SealedPenthouseLoot`/`OpenPenthouseLootBag`), mismo patrón ya probado
+  del duffel gris del Knox Bank — solo cambia el nombre interno para que
+  cada golpe tenga su propio tipo de ítem.
+- El panel de detalle del ordenador calcula los 3 tiles de recompensa y el
+  resumen en texto a partir de `heist.loot` real (antes mostraba siempre
+  "$25 000 / x5 lingotes", igual para los tres golpes).
 - **Trofeos coleccionables por golpe.** Cada golpe de Louisville deja un
   recuerdo único al archivarse, para exhibir en el refugio (categoría
   `Memento`, sin función): `LastPurpose.TrophyKnoxIngot` (lingote grabado —

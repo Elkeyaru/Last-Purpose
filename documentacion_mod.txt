@@ -230,11 +230,16 @@ orden de prioridad:
    uno abre el siguiente); las otras ciudades se abren al haber estado allí
    o tener su mapa vanilla; las líneas de profesión, al completar el prólogo
    del Ladrón + Nv. 2 de su habilidad. Un solo golpe activo a la vez.
-3. Agregar golpes nuevos en Louisville — la cadena es de 3 en total (Knox +
-   2): `louisville_last_exhibition` (galería) y `louisville_penthouse`
-   (ático), ya en el catálogo con `implemented = false`. Falta su diseño de
-   misión, contenido y coordenadas. Objetivo ~19 golpes para el Ladrón entre
-   todas las ciudades.
+3. Golpes nuevos en Louisville — la cadena de 3 (Knox + `louisville_last_
+   exhibition` + `louisville_penthouse`) está **implementada y marcada
+   `implemented = true`**, sin probar en partida. El motor de golpes se
+   generalizó para ya no estar atado al Knox Bank (ver sección 12.9/12.10).
+   **Pendiente crítico: verificar en partida las coordenadas** de la
+   galería y el ático (edificio, sala/piso de la escena del botín, puntos
+   de huida) — las actuales son un punto de partida sin confirmar, tomadas
+   de `narrative-drafts/` y cruzadas solo parcialmente contra una guía de
+   comunidad externa. Objetivo ~19 golpes para el Ladrón entre todas las
+   ciudades.
 4. Historias de otras profesiones (Leñador, Veterano, Mecánico, Médico,
    Desempleado), reutilizando el hub del punto 2.
 

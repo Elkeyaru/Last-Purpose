@@ -139,6 +139,13 @@ LastPurpose.HEISTS = {
         y = LastPurpose.World.BANK_MARKER.y,
         arrivalRadius = LastPurpose.World.BANK_MARKER.arrivalRadius,
         marker = "X",
+        -- Exige la ventana nocturna (20:00-05:00) antes de poder arrancar;
+        -- validado en partida real.
+        requiresNight = true,
+        lootSpawn = LastPurpose.World.BANK_LOOT_SPAWN,
+        lootBagType = "LastPurpose.SealedKnoxBankLoot",
+        openBagType = "LastPurpose.OpenKnoxBankLootBag",
+        escapeOrigin = LastPurpose.World.ALARM_ORIGIN,
         clueSites = {
             {12595, 998}, {12916, 1204}, {13206, 1244}, {12688, 1497}, {13230, 1691},
             {12148, 1728}, {12556, 1914}, {13550, 2085}, {12762, 2206}, {13567, 2344},
@@ -183,6 +190,126 @@ LastPurpose.HEISTS = {
             nimbleLevels = 2,
         },
     },
+
+    -- ===== La ultima exposicion (galeria, norte de Louisville) =====
+    -- Segundo golpe de la cadena de Louisville (order 2 en LastPurpose.CATALOG).
+    -- COORDENADAS SIN VERIFICAR EN PARTIDA: x,y tomados del borrador de GPT
+    -- (narrative-drafts/last_exhibition.md), cruzados contra una guia de
+    -- comunidad que ubica un "art gallery" ~11 casillas mas al norte. Hay DOS
+    -- galerias en esa zona segun esa guia; cual es la correcta y en que
+    -- sala/planta va la escena del botin sigue sin confirmar. clueSites son
+    -- puntos genericos de la zona (el motor tolera el error: busca en
+    -- espiral una casilla usable). Sin alarma ni ventana horaria -- el
+    -- riesgo son los zombis que la busqueda del cuadro atrae a varias
+    -- calles de los alrededores, no un sistema de seguridad del edificio.
+    louisville_last_exhibition = {
+        id = "louisville_last_exhibition",
+        title = "La ultima exposicion",
+        mission = "Recuperar \"La dama de carmesi\" antes que nadie mas",
+        destination = "Galeria de arte, norte de Louisville",
+        x = 12512, y = 1433, arrivalRadius = 30,
+        marker = "X",
+        requiresNight = false,
+        lootSpawn = { x = 12512, y = 1433, z = 1 },
+        lootBagType = "LastPurpose.SealedGalleryLoot",
+        openBagType = "LastPurpose.OpenGalleryLootBag",
+        escapeOrigin = { x = 12512, y = 1433, z = 0 },
+        clueSites = {
+            {12632, 1353}, {12812, 1493}, {12362, 1213}, {12572, 1713}, {12192, 1573},
+            {12912, 1173}, {12292, 1083}, {12692, 1853}, {12112, 1373},
+        },
+        dialogue = {
+            "<bzzt> Otra vez yo. No cuelgues.",
+            "La galeria del norte no alcanzo a evacuar todo antes del corte.",
+            "Dejaron \"La dama de carmesi\" ahi dentro, junto con el resto.",
+            "Alguien dejo anotado donde exactamente. Encuentra esa nota primero.",
+            "No va a quedarse ahi mucho tiempo, te lo aseguro.",
+            "¿Me copiaste? <fzzt>",
+        },
+        finalLine = "Me copiaste?",
+        loot = {
+            valuables = {
+                { type = "Base.NecklaceLong_GoldDiamond", count = 1 },
+                { type = "Base.Necklace_GoldDiamond", count = 2 },
+                { type = "Base.Diamond", count = 3 },
+                { type = "Base.MoneyBundle", count = 4 },
+            },
+            supplies = {
+                { type = "Base.Antibiotics", count = 1 },
+                { type = "Base.Pills", count = 2 },
+                { type = "Base.Bandage", count = 4 },
+                { type = "Base.AlcoholWipes", count = 6 },
+                { type = "Base.Battery", count = 4 },
+                { type = "Base.DuctTape", count = 2 },
+                { type = "Base.RippedSheets", count = 4 },
+                { type = "Base.CannedCornedBeef", count = 2 },
+            },
+            ammoChoices = {
+                "Base.Bullets9mmBox", "Base.ShotgunShellsBox", "Base.308Box",
+                "Base.556Box", "Base.Bullets45Box", "Base.Bullets357Box",
+            },
+            ammoRolls = 2,
+            nimbleLevels = 2,
+        },
+    },
+
+    -- ===== El cielo tiene dueno (atico, Louisville) =====
+    -- Tercer y ultimo golpe de la cadena de Louisville (order 3). COORDENADAS
+    -- SIN VERIFICAR EN PARTIDA: x,y del borrador de GPT
+    -- (narrative-drafts/penthouse_fortune.md), sin cruzar contra ninguna
+    -- fuente externa. Sin alarma ni ventana horaria. El diseno original
+    -- proponia zombis en plantas inferiores al bajar con el botin (variacion
+    -- vertical, pendiente de confirmar cuantos pisos tiene el edificio real);
+    -- para este primer corte usa la misma emboscada radial que los otros dos
+    -- golpes, mas simple y ya probada.
+    louisville_penthouse = {
+        id = "louisville_penthouse",
+        title = "El cielo tiene dueno",
+        mission = "Recuperar la fortuna escondida de un empresario",
+        destination = "Atico de Louisville, planta superior",
+        x = 12781, y = 1824, arrivalRadius = 25,
+        marker = "X",
+        requiresNight = false,
+        lootSpawn = { x = 12781, y = 1824, z = 1 },
+        lootBagType = "LastPurpose.SealedPenthouseLoot",
+        openBagType = "LastPurpose.OpenPenthouseLootBag",
+        escapeOrigin = { x = 12781, y = 1824, z = 0 },
+        clueSites = {
+            {12921, 1724}, {12521, 1914}, {13091, 2004}, {12661, 1544}, {12851, 2204},
+            {12401, 1674}, {13031, 1494}, {12601, 2144}, {13201, 1884},
+        },
+        dialogue = {
+            "<bzzt> Ultima llamada antes de que otro se adelante.",
+            "El empresario del atico se fue sin vaciar la caja fuerte.",
+            "Alguien del edificio dejo anotado donde la escondio.",
+            "Encuentra esa nota y sube hasta arriba del todo.",
+            "No creo que quede nadie para detenerte, pero no bajes la guardia.",
+            "¿Me copiaste? <fzzt>",
+        },
+        finalLine = "Me copiaste?",
+        loot = {
+            valuables = {
+                { type = "Base.SmallGoldBar", count = 3 },
+                { type = "Base.Diamond", count = 3 },
+                { type = "Base.MoneyBundle", count = 5 },
+                { type = "Base.GoldCoin", count = 6 },
+            },
+            supplies = {
+                { type = "Base.Antibiotics", count = 2 },
+                { type = "Base.Pills", count = 3 },
+                { type = "Base.SutureNeedle", count = 1 },
+                { type = "Base.Bandage", count = 4 },
+                { type = "Base.Battery", count = 4 },
+                { type = "Base.Pistol", count = 1 },
+                { type = "Base.CannedSardines", count = 2 },
+            },
+            ammoChoices = {
+                "Base.Bullets9mmBox", "Base.Bullets45Box", "Base.Bullets357Box",
+            },
+            ammoRolls = 3,
+            nimbleLevels = 2,
+        },
+    },
 }
 
 LastPurpose.HEIST_ORDER = { "louisville_knox_bank" }
@@ -196,6 +323,46 @@ LastPurpose.HEIST_TROPHIES = {
     louisville_last_exhibition = "LastPurpose.TrophyCrimsonLady",
     louisville_penthouse       = "LastPurpose.TrophyPenthouseGoblet",
 }
+
+-- Campos de data.* que pertenecen a UN golpe (radio/pista/botin/huida/
+-- recompensa de ESE golpe). Al terminar un golpe, data.stage se queda en
+-- "completed" para siempre -- la maquina de etapas es una sola para toda la
+-- partida y no vuelve sola a "inactive". Para poder encadenar un golpe
+-- nuevo (ver LPComputer:onSelectHeist) hay que limpiar este rastro antes de
+-- reactivar la maquina. NO se tocan aqui: data.objectives (herramientas +
+-- mesa, se reusan), data.safehouse* (el refugio es el mismo), data.stage
+-- (lo pone el que llama), data.selectedHeist/activeHeistId (idem),
+-- data.completedHeists/citiesVisited (progreso del hub), data.schema.
+local RESET_ON_NEW_HEIST = {
+    "radioPromptShown", "radioTransmissionHeard", "radioHeardAtHours",
+    "clueSpawned", "clueX", "clueY", "clueZ", "clueSiteIndex",
+    "cluePickedUp", "clueHeldSinceHours", "clueReadHintShown", "clueRecovered",
+    "completedAtHours", "heistReachedAtHours",
+    "lootSpawned", "lootSquareWarningPrinted", "lootTakenAtHours", "lootBagOpened",
+    "bankEscapeCompleted", "safehouseReturned",
+    "ambushTriggered", "ambushCompleted", "ambushForced", "ambushWavesSpawned",
+    "ambushZombiesSpawned", "ambushClustersProcessed", "ambushRemainingMs",
+    "exitAmbushPrepared", "exitAmbushPending",
+    "mapCenteredOnce", "safehouseMapCenteredOnce", "mapMarkerX", "mapMarkerY",
+    "completionRewardItems", "completionAmmoTypes", "completionSuppliesGranted",
+    "completionNimbleLevelsGranted", "heistCompletionRewardGranted", "heistCompletedAtHours",
+}
+
+--- Limpia el rastro de un golpe para poder empezar el siguiente. Ver
+--- RESET_ON_NEW_HEIST arriba para que se borra y por que.
+function LastPurpose.resetHeistRun(data)
+    if not data then return end
+    for _, key in ipairs(RESET_ON_NEW_HEIST) do
+        data[key] = nil
+    end
+    -- data.mapAreaRevealed_<clave> es dinamico (heist/clue/safehouse): se
+    -- limpia por patron en vez de listarlos todos a mano.
+    for key in pairs(data) do
+        if type(key) == "string" and key:find("^mapAreaRevealed_") then
+            data[key] = nil
+        end
+    end
+end
 
 -- ===== Hito 2: ciudades y catalogo de desbloqueo =====
 --
@@ -246,10 +413,10 @@ LastPurpose.CATALOG = {
       unlock = { type = "start" }, implemented = true },
     { id = "louisville_last_exhibition", city = "LOUISVILLE", order = 2,
       name = "La ultima exposicion", short = "Galeria del norte, Louisville",
-      unlock = { type = "completePrev" }, implemented = false },
+      unlock = { type = "completePrev" }, implemented = true },
     { id = "louisville_penthouse", city = "LOUISVILLE", order = 3,
       name = "El cielo tiene dueno", short = "Penthouse, Louisville",
-      unlock = { type = "completePrev" }, implemented = false },
+      unlock = { type = "completePrev" }, implemented = true },
 
     -- Otras ciudades: gated por conocer la ciudad. Contenido en el punto 3.
     { id = "westpoint_payroll", city = "WEST_POINT", order = 1,

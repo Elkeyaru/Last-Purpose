@@ -6,5 +6,9 @@
     "LastPurpose.BandWalkieTalkie": "Walkie Takie de la banda",
     "LastPurpose.TrophyKnoxIngot": "Lingote grabado del Knox Bank",
     "LastPurpose.TrophyCrimsonLady": "«La dama de carmesí»",
-    "LastPurpose.TrophyPenthouseGoblet": "Copa de oro del ático"
+    "LastPurpose.TrophyPenthouseGoblet": "Copa de oro del ático",
+    "LastPurpose.SealedGalleryLoot": "Bolsa sellada de la galería",
+    "LastPurpose.OpenGalleryLootBag": "Bolsa de botín de la galería",
+    "LastPurpose.SealedPenthouseLoot": "Bolsa sellada del ático",
+    "LastPurpose.OpenPenthouseLootBag": "Bolsa de botín del ático"
 }

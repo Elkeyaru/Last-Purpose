@@ -103,7 +103,7 @@ local function spawnGuards(x, y, z, n)
     end
 end
 
-local function spawnClue(data, clue)
+local function spawnClue(data, clue, heistId)
     local square = findClueSquare(clue.x, clue.y, clue.z)
     if not square then return false end
     local sx, sy, sz = square:getX(), square:getY(), square:getZ()
@@ -124,7 +124,7 @@ local function spawnClue(data, clue)
             if okC and cont then
                 local okA, item = pcall(function() return cont:AddItem(NOTE_TYPE) end)
                 if okA and item then
-                    item:getModData().LastPurposeClue = "louisville_knox_bank"
+                    item:getModData().LastPurposeClue = heistId
                     placed = true
                 end
             end
@@ -134,7 +134,7 @@ local function spawnClue(data, clue)
         -- Ultimo recurso: en el suelo, para que la nota nunca se pierda.
         local note = square:AddWorldInventoryItem(NOTE_TYPE, 0.5, 0.5, 0)
         if not note then return false end
-        note:getModData().LastPurposeClue = "louisville_knox_bank"
+        note:getModData().LastPurposeClue = heistId
     end
 
     -- Al menos 3 zombis custodiando.
@@ -160,7 +160,7 @@ function LastPurpose.updateInvestigation(player)
     if LastPurpose.stageIs(data, "radio_heard") then
         local dx, dy = player:getX() - clue.x, player:getY() - clue.y
         if player:getZ() == clue.z and (dx * dx) + (dy * dy) <= (clue.arrivalRadius * clue.arrivalRadius) then
-            if not data.clueSpawned then spawnClue(data, clue) end
+            if not data.clueSpawned then spawnClue(data, clue, heist.id) end
             if data.clueSpawned then
                 LastPurpose.setStage(data, "clue_found")
                 LastPurpose.showThought(player, {
@@ -203,10 +203,10 @@ function LastPurpose.updateInvestigation(player)
         data.mapCenteredOnce = false
         data.mapAreaRevealed_heist = false
         LastPurpose.showThought(player, {
-            "Knox Bank... asi que ese es el objetivo.",
+            "Asi que es ahi: " .. tostring(heist.destination or heist.title or "el objetivo") .. ".",
             "Sera mejor reconocer la zona primero.",
         })
-        LastPurpose.debugPrint("El jugador leyo la nota y descubrio el banco")
+        LastPurpose.debugPrint("El jugador leyo la nota y descubrio el objetivo (" .. tostring(heist.id) .. ")")
         return
     end
 
@@ -217,19 +217,32 @@ function LastPurpose.updateInvestigation(player)
             and distanceSquared > (heist.arrivalRadius * heist.arrivalRadius) then
             LastPurpose.setStage(data, "bank_scouted")
             data.mapCenteredOnce = false
-            LastPurpose.showThought(player, {
-                "Ya conozco las entradas.",
-                "Volvere cuando haya oscurecido.",
-            })
-            LastPurpose.debugPrint("Knox Bank reconocido sin iniciar el golpe")
+            if heist.requiresNight == false then
+                LastPurpose.showThought(player, {
+                    "Ya conozco el lugar.",
+                    "Puedo volver cuando quiera.",
+                })
+            else
+                LastPurpose.showThought(player, {
+                    "Ya conozco las entradas.",
+                    "Volvere cuando haya oscurecido.",
+                })
+            end
+            LastPurpose.debugPrint("Objetivo reconocido sin iniciar el golpe (" .. tostring(heist.id) .. ")")
         end
         return
     end
 
     if LastPurpose.stageIs(data, "bank_scouted") then
-        local hour = getGameTime():getHour()
-        local isNight = hour >= LastPurpose.World.NIGHT_START_HOUR or hour < LastPurpose.World.NIGHT_END_HOUR
-        if not isNight then return end
+        -- La mayoria de los golpes exigen la ventana nocturna (20:00-05:00,
+        -- igual que el Knox Bank validado en partida). heist.requiresNight =
+        -- false salta esta espera (p. ej. la galeria y el atico, que no
+        -- tienen vigilancia horaria segun su diseno).
+        if heist.requiresNight ~= false then
+            local hour = getGameTime():getHour()
+            local isNight = hour >= LastPurpose.World.NIGHT_START_HOUR or hour < LastPurpose.World.NIGHT_END_HOUR
+            if not isNight then return end
+        end
         local dx, dy = player:getX() - heist.x, player:getY() - heist.y
         if (dx * dx) + (dy * dy) <= (heist.arrivalRadius * heist.arrivalRadius) then
             LastPurpose.setStage(data, "heist_active")
@@ -238,7 +251,7 @@ function LastPurpose.updateInvestigation(player)
                 "Este es el momento.",
                 "Ahora tengo que encontrar el botin.",
             })
-            LastPurpose.debugPrint("El golpe comenzo durante la ventana nocturna")
+            LastPurpose.debugPrint("El golpe comenzo (" .. tostring(heist.id) .. ")")
         end
     end
 end
